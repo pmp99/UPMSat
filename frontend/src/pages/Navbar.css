@@ -1,0 +1,34 @@
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    height: 4rem;
+    padding: 0 2.5rem;
+}
+
+.navbarLogo {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-right: auto;
+    text-decoration: none;
+    color: black;
+}
+
+.navbarButtons {
+    display: flex;
+    gap: 1.5rem;
+    height: 60%;
+}
+
+.username {
+    margin-right: 0.8rem;
+    text-transform: lowercase;
+}
+
+.profileButton {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
