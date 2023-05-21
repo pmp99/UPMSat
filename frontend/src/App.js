@@ -4,7 +4,7 @@ import Login from "./pages/Login";
 import Main from "./pages/Main";
 import Navbar from "./pages/Navbar";
 import Register from "./pages/Register";
-import CassandraTable from "./pages/CassandraTable";
+import Data from "./pages/Data";
 
 function App() {
   return(
@@ -14,7 +14,7 @@ function App() {
               <Route path="/" element={<Main />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
-              <Route path=":tableName" element={<CassandraTable />} />
+              <Route path=":tableName" element={<Data />} />
               <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
       </BrowserRouter>

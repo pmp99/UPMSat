@@ -190,7 +190,7 @@ const dateIntervalMiddleware = (req, res, next) => {
 }
 
 
-router.get('/api/telemetry/:type', dateIntervalMiddleware, (req, res, next) => {
+router.get('/api/telemetry/:type', authMiddleware, dateIntervalMiddleware, (req, res, next) => {
     let type = req.params.type.toLowerCase()
     if (type !== 'hk' && type !== 'sc') {
         return res.status(400).send({msg: "Incorrect telemetry type"})
@@ -296,7 +296,7 @@ router.get('/api/telemetry/:type', dateIntervalMiddleware, (req, res, next) => {
     }
 })
 
-router.get('/api/telecommand', (req, res, next) => {
+router.get('/api/telecommand', authMiddleware, (req, res, next) => {
     const tcInclude = [
         {model: models.TC_Change_Balloon_Mode, as: 'change_balloon_mode', include: [{model: models.Balloon_Mode, as: 'new_mode'}]},
         {model: models.TC_Control_Experiment_Heater, as: 'control_experiment_heater', include: [{model: models.Heater_ID, as: 'heater'}, {model: models.Heater_Power_Type, as: 'heater_power'}]},
