@@ -53,7 +53,7 @@ function Data() {
             <Table {...props} sx={{borderCollapse: 'separate', tableLayout: 'fixed'}} />
         ),
         TableHead: (props) => <ListItem {...props} style={{height: '4rem'}} />,
-        TableRow: ({ item: _item, ...props }) => <div {...props} style={{width: '100%', flex: 1}} />,
+        TableRow: ({ item: _item, ...props }) => <div {...props} style={{width: '100%', flex: 1, borderTop: '1px solid lightgray'}} />,
         TableBody: React.forwardRef((props, ref) => <TableBody {...props} ref={ref} />),
     }
 
@@ -63,6 +63,33 @@ function Data() {
 
     const getData = (d) => {
         return typeof d !== 'object' ? d : (d['data'] !== undefined ? d['data'] : d['iid'])
+    }
+
+    const displayData = (obj, column, n) => {
+        return(
+            <div style={{marginTop: n<2 ? '1rem' : 0}}>
+                <span style={{fontWeight: 'bold', marginBottom: '0.5rem'}}>{column}</span>
+                {Object.keys(obj[column]).map(c => {
+                    if (c.includes('fk_')) {
+                        return null
+                    }
+                    if (isData(obj[column][c])) {
+                        return(
+                            <div key={c} style={{marginLeft: 1*n+'rem'}}>
+                                <span>{c}</span>
+                                <span style={{marginLeft: '2rem'}}>{getData(obj[column][c])}</span>
+                            </div>
+                        )
+                    } else {
+                        return(
+                            <div key={c} style={{marginLeft: 1*n+'rem'}}>
+                                {displayData(obj[column], c, n+1)}
+                            </div>
+                        )
+                    }
+                })}
+            </div>
+        )
     }
 
     function fixedHeaderContent() {
@@ -85,10 +112,11 @@ function Data() {
     }
 
     function rowContent(_index, row) {
+        let columns = []
         return (
             <>
                 <ListItemButton style={{height: '4rem'}} onClick={() => setOpen(prevState => prevState === undefined || prevState !== row['iid'] ? row['iid'] : undefined)}>
-                    <div style={{display: 'flex', height: '100%', alignItems: 'center', marginHorizontal: '2rem', width: '100%'}} >
+                    <div style={{display: 'flex', height: '100%', alignItems: 'center', width: '100%'}} >
                         {Object.keys(row).map(column => {
                             if (!column.includes('fk_') && isData(row[column])) {
                                 return(
@@ -97,6 +125,7 @@ function Data() {
                                     </div>
                                 )
                             } else {
+                                !column.includes('fk_') && columns.push(column)
                                 return null
                             }
                         })}
@@ -106,7 +135,11 @@ function Data() {
                     </div>
                 </ListItemButton>
                 <Collapse in={open === row['iid']} timeout="auto" unmountOnExit>
-                    <div style={{height: '4rem', backgroundColor: 'blue'}}/>
+                    <div style={{margin: '1rem'}}>
+                        {columns.map(c => {
+                            return displayData(row, c, 0)
+                        })}
+                    </div>
                 </Collapse>
             </>
         )
