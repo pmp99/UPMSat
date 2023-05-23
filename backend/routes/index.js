@@ -14,6 +14,7 @@ const models = initModels(db)
 
 const secretKey = 'BQuhVBupZGnKroT1lIMoo3YsdhEb05YWVMcn5rrSY5vqz5dH5ZTBpiQtZiziFkE'
 const tokenExpiration = '24h'
+const cookieMaxAge = 24*60*60*1000
 
 const authMiddleware = (req, res, next) => {
     const theToken = req.cookies.authToken
@@ -67,7 +68,8 @@ router.post('/auth/register', signupValidation, (req, res, next) => {
                                         return res.status(200).cookie("authToken", token, {
                                             httpOnly: true,
                                             secure: true,
-                                            sameSite: 'lax'
+                                            sameSite: 'lax',
+                                            maxAge: cookieMaxAge
                                         }).send({user: user})
                                     })
                                 })
@@ -107,7 +109,8 @@ router.post('/auth/login', loginValidation, (req, res, next) => {
                 return res.status(200).cookie("authToken", token, {
                     httpOnly: true,
                     secure: true,
-                    sameSite: 'lax'
+                    sameSite: 'lax',
+                    maxAge: cookieMaxAge
                 }).send({user: compactUser})
             }
             return res.status(401).send({msg: 'Username or password is incorrect'})
