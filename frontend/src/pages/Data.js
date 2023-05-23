@@ -3,7 +3,7 @@ import './Main.css';
 import {useDispatch, useSelector} from "react-redux";
 import {Button, CircularProgress} from "@mui/material";
 import {getTable} from "../redux/upmsatSlice";
-import {Navigate, useParams} from "react-router-dom";
+import {Navigate} from "react-router-dom";
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableContainer from '@mui/material/TableContainer';
@@ -20,18 +20,18 @@ import Collapse from '@mui/material/Collapse';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItem from '@mui/material/ListItem';
 
-function Data() {
+function Data(props) {
     const dispatch = useDispatch()
     const auth = useSelector(state => state.auth)
     const upmsat = useSelector(state => state.upmsat)
     const [start, setStart] = useState()
     const [end, setEnd] = useState()
     const [open, setOpen] = useState()
-    const {tableName} = useParams()
+    const {tm} = props
 
     useEffect(() => {
         if (auth.user) {
-            dispatch(getTable({table: tableName, start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))
+            dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))
         }
     }, [auth.user])
 
@@ -149,26 +149,27 @@ function Data() {
         <div className="container">
             {!upmsat.loading ?
                 <div style={{width: '100%', flex: 1, display: 'flex', flexDirection: 'column'}}>
-                    <h1 className="tableTitle">{tableName}</h1>
-                    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
-                        <div style={{display: 'flex', flexDirection: 'row', margin: "0 2rem 1.5rem 2rem", gap: '1rem'}}>
-                            <DateTimePicker
-                                label="Start"
-                                value={start}
-                                onChange={(v) => setStart(v)}
-                                format="DD/MM/YYYY hh:mm:ss"
-                            />
-                            <DateTimePicker
-                                label="End"
-                                value={end}
-                                onChange={(v) => setEnd(v)}
-                                format="DD/MM/YYYY hh:mm:ss"
-                            />
-                            <Button variant={'outlined'} onClick={() => auth.user && dispatch(getTable({table: tableName, start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))}>
-                                <RefreshRoundedIcon/>
-                            </Button>
-                        </div>
-                    </LocalizationProvider>
+                    <h1 className="tableTitle">{tm === 'hk' ? 'Housekeeping Telemetry' : tm === 'sc' ? 'Scientific Telemetry' : 'Telecommand'}</h1>
+                    {tm ?
+                        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+                            <div style={{display: 'flex', flexDirection: 'row', margin: "0 2rem 1.5rem 2rem", gap: '1rem'}}>
+                                <DateTimePicker
+                                    label="Start"
+                                    value={start}
+                                    onChange={(v) => setStart(v)}
+                                    format="DD/MM/YYYY hh:mm:ss"
+                                />
+                                <DateTimePicker
+                                    label="End"
+                                    value={end}
+                                    onChange={(v) => setEnd(v)}
+                                    format="DD/MM/YYYY hh:mm:ss"
+                                />
+                                <Button variant={'outlined'} onClick={() => auth.user && dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))}>
+                                    <RefreshRoundedIcon/>
+                                </Button>
+                            </div>
+                        </LocalizationProvider> : null}
                     {upmsat.table && upmsat.table.length > 0 ?
                         <Paper style={{flex: 1, margin: "0 2rem 2rem 2rem"}}>
                             <TableVirtuoso

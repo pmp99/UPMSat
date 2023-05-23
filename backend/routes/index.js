@@ -183,7 +183,7 @@ const dateIntervalMiddleware = (req, res, next) => {
         start = 0
     }
     req.dateWhere = undefined
-    if (start && end) {
+    if (!isNaN(start) && !isNaN(end)) {
         req.dateWhere = {data: {[Op.between]: [start, end]}}
     }
     next()
@@ -303,12 +303,71 @@ router.get('/api/telecommand', authMiddleware, (req, res, next) => {
         {model: models.TC_Start_Manual_Control, as: 'start_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]},
         {model: models.TC_Stop_Manual_Control, as: 'stop_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]},
         {model: models.TC_Change_TM_Mode, as: 'change_tm_mode', include: [{model: models.TMTC_Mode, as: 'new_mode'}]},
-        {model: models.TC_Restart_Device, as: 'restart_device', include: [{model: models.Restartable_Device_ID, as: 'device_id'}]},
+        {model: models.TC_Restart_Device, as: 'restart_device', include: [{model: models.Restartable_Device_ID, as: 'device_id'}]}
     ]
 
     models.TC_Type.findAll({include: tcInclude})
         .then(r => res.send(r))
         .catch(error => res.status(400).send({msg: error.message}))
+})
+
+router.post('/api/telecommand/edit/:id', authMiddleware, async (req, res, next) => {
+    const tcInclude = [
+        {model: models.TC_Change_Balloon_Mode, as: 'change_balloon_mode', include: [{model: models.Balloon_Mode, as: 'new_mode'}]},
+        {model: models.TC_Control_Experiment_Heater, as: 'control_experiment_heater', include: [{model: models.Heater_ID, as: 'heater'}, {model: models.Heater_Power_Type, as: 'heater_power'}]},
+        {model: models.TC_Start_Manual_Control, as: 'start_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]},
+        {model: models.TC_Stop_Manual_Control, as: 'stop_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]},
+        {model: models.TC_Change_TM_Mode, as: 'change_tm_mode', include: [{model: models.TMTC_Mode, as: 'new_mode'}]},
+        {model: models.TC_Restart_Device, as: 'restart_device', include: [{model: models.Restartable_Device_ID, as: 'device_id'}]}
+    ]
+
+    const id = parseInt(req.params.id)
+
+    try{
+        const tc = await db.transaction(async (t) => {
+            const currentTC = await models.TC_Type.findByPk(id, {include: tcInclude, transaction: t})
+
+            if (currentTC?.change_balloon_mode?.new_mode?.data !== req.body?.change_balloon_mode?.new_mode?.data) {
+                await models.Balloon_Mode.update({data: req.body?.change_balloon_mode?.new_mode?.data}, {
+                    where: {iid: currentTC?.change_balloon_mode?.new_mode?.iid}, transaction: t
+                })
+            }
+            if (currentTC?.control_experiment_heater?.heater_power?.data !== req.body?.control_experiment_heater?.heater_power?.data) {
+                await models.Heater_Power_Type.update({data: req.body?.control_experiment_heater?.heater_power?.data}, {
+                    where: {iid: currentTC?.control_experiment_heater?.heater_power?.iid}, transaction: t
+                })
+            }
+            if (currentTC?.control_experiment_heater?.heater?.data !== req.body?.control_experiment_heater?.heater?.data) {
+                await models.Heater_ID.update({data: req.body?.control_experiment_heater?.heater?.data}, {
+                    where: {iid: currentTC?.control_experiment_heater?.heater?.iid}, transaction: t
+                })
+            }
+            if (currentTC?.start_manual_control?.heater?.data !== req.body?.start_manual_control?.heater?.data) {
+                await models.Heater_ID.update({data: req.body?.start_manual_control?.heater?.data}, {
+                    where: {iid: currentTC?.start_manual_control?.heater?.iid}, transaction: t
+                })
+            }
+            if (currentTC?.stop_manual_control?.heater?.data !== req.body?.stop_manual_control?.heater?.data) {
+                await models.Heater_ID.update({data: req.body?.stop_manual_control?.heater?.data}, {
+                    where: {iid: currentTC?.stop_manual_control?.heater?.iid}, transaction: t
+                })
+            }
+            if (currentTC?.change_tm_mode?.new_mode?.data !== req.body?.change_tm_mode?.new_mode?.data) {
+                await models.TMTC_Mode.update({data: req.body?.change_tm_mode?.new_mode?.data}, {
+                    where: {iid: currentTC?.change_tm_mode?.new_mode?.iid}, transaction: t
+                })
+            }
+            if (currentTC?.restart_device?.device_id?.data !== req.body?.restart_device?.device_id?.data) {
+                await models.Restartable_Device_ID.update({data: req.body?.restart_device?.device_id?.data}, {
+                    where: {iid: currentTC?.restart_device?.device_id?.iid}, transaction: t
+                })
+            }
+            return await models.TC_Type.findByPk(id, {include: tcInclude, transaction: t})
+        })
+        res.send(tc)
+    } catch(error) {
+        res.status(400).send({msg: error.message})
+    }
 })
 
 

@@ -9,9 +9,9 @@ export const getTable = createAsyncThunk(
     async ({table, start, end}, {rejectWithValue}) => {
         try{
             let url
-            if (table.includes('HK')) {
+            if (table.includes('hk')) {
                 url = 'https://localhost:8443/api/telemetry/hk'
-            } else if (table.includes('SC')) {
+            } else if (table.includes('sc')) {
                 url = 'https://localhost:8443/api/telemetry/sc'
             } else {
                 url = 'https://localhost:8443/api/telecommand'

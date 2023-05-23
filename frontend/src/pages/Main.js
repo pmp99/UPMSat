@@ -14,9 +14,9 @@ function Main() {
             {auth.user || auth.loading || !auth.userLoaded ? null : <h4>Log in to see more options</h4>}
             {!auth.user ? null : !auth.userLoaded ? <CircularProgress/> :
                 <div>
-                    <Button onClick={() => navigate('HK Telemetry')}>HK Telemetry</Button>
-                    <Button onClick={() => navigate('SC Telemetry')}>SC Telemetry</Button>
-                    <Button onClick={() => navigate('Telecommand')}>Telecommand</Button>
+                    <Button onClick={() => navigate('telemetry/hk')}>HK Telemetry</Button>
+                    <Button onClick={() => navigate('telemetry/sc')}>SC Telemetry</Button>
+                    <Button onClick={() => navigate('telecommand')}>Telecommand</Button>
                 </div>
             }
         </div>

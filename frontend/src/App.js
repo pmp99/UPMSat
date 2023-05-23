@@ -14,7 +14,9 @@ function App() {
               <Route path="/" element={<Main />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
-              <Route path=":tableName" element={<Data />} />
+              <Route path="telemetry/hk" element={<Data tm={'hk'}/>} />
+              <Route path="telemetry/sc" element={<Data tm={'sc'}/>} />
+              <Route path="telecommand" element={<Data/>} />
               <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
       </BrowserRouter>
