@@ -1,24 +1,27 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import './Main.css';
 import {useDispatch, useSelector} from "react-redux";
-import {Button, CircularProgress} from "@mui/material";
-import {getTable} from "../redux/upmsatSlice";
+import {Button, CircularProgress, TextField} from "@mui/material";
+import {getTable, editTelecommand} from "../redux/upmsatSlice";
 import {Navigate} from "react-router-dom";
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableContainer from '@mui/material/TableContainer';
 import Paper from '@mui/material/Paper';
 import {DateTimePicker} from '@mui/x-date-pickers/DateTimePicker';
-import {TableVirtuoso} from 'react-virtuoso';
+import {Virtuoso} from 'react-virtuoso';
 import {LocalizationProvider} from "@mui/x-date-pickers";
 import {AdapterDayjs} from "@mui/x-date-pickers/AdapterDayjs";
 import 'dayjs/locale/es';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import ChevronRight from '@mui/icons-material/ChevronRight';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
 import Collapse from '@mui/material/Collapse';
 import ListItemButton from '@mui/material/ListItemButton';
-import ListItem from '@mui/material/ListItem';
+import TreeItem, {treeItemClasses} from '@mui/lab/TreeItem';
+import TreeView from '@mui/lab/TreeView';
+import {styled} from '@mui/material/styles';
+import {get} from 'lodash';
 
 function Data(props) {
     const dispatch = useDispatch()
@@ -27,6 +30,9 @@ function Data(props) {
     const [start, setStart] = useState()
     const [end, setEnd] = useState()
     const [open, setOpen] = useState()
+    const treeKeys = useRef([])
+    const [expanded, setExpanded] = useState([])
+    const [editable, setEditable] = useState(null)
     const {tm} = props
 
     useEffect(() => {
@@ -34,6 +40,10 @@ function Data(props) {
             dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))
         }
     }, [auth.user])
+
+    useEffect(() => {
+        editable !== null && setEditable(null)
+    }, [upmsat.table?.data])
 
     if (!auth.user && auth.userLoaded) {
         return <Navigate to={'/'} replace={true}/>
@@ -45,18 +55,6 @@ function Data(props) {
         )
     }
 
-    const VirtuosoTableComponents = {
-        Scroller: React.forwardRef((props, ref) => (
-            <TableContainer component={Paper} {...props} ref={ref} />
-        )),
-        Table: (props) => (
-            <Table {...props} sx={{borderCollapse: 'separate', tableLayout: 'fixed'}} />
-        ),
-        TableHead: (props) => <ListItem {...props} style={{height: '4rem'}} />,
-        TableRow: ({ item: _item, ...props }) => <div {...props} style={{width: '100%', flex: 1, borderTop: '1px solid lightgray'}} />,
-        TableBody: React.forwardRef((props, ref) => <TableBody {...props} ref={ref} />),
-    }
-
     const isData = (d) => {
         return typeof d !== 'object' || d['data'] !== undefined || (d['iid'] && Object.keys(d).length === 1)
     }
@@ -65,40 +63,92 @@ function Data(props) {
         return typeof d !== 'object' ? d : (d['data'] !== undefined ? d['data'] : d['iid'])
     }
 
-    const displayData = (obj, column, n) => {
-        return(
-            <div style={{marginTop: n<2 ? '1rem' : 0}}>
-                <span style={{fontWeight: 'bold', marginBottom: '0.5rem'}}>{column}</span>
-                {Object.keys(obj[column]).map(c => {
-                    if (c.includes('fk_')) {
-                        return null
-                    }
-                    if (isData(obj[column][c])) {
-                        return(
-                            <div key={c} style={{marginLeft: 1*n+'rem'}}>
-                                <span>{c}</span>
-                                <span style={{marginLeft: '2rem'}}>{getData(obj[column][c])}</span>
-                            </div>
-                        )
-                    } else {
-                        return(
-                            <div key={c} style={{marginLeft: 1*n+'rem'}}>
-                                {displayData(obj[column], c, n+1)}
-                            </div>
-                        )
-                    }
-                })}
-            </div>
+    const StyledTreeItemRoot = styled(TreeItem)(({ theme }) => ({
+        color: theme.palette.text.secondary,
+        [`& .${treeItemClasses.content}`]: {
+            color: theme.palette.text.secondary,
+            borderTopRightRadius: theme.spacing(2),
+            borderBottomRightRadius: theme.spacing(2),
+            padding: 0,
+            width: 'auto',
+            fontWeight: theme.typography.fontWeightMedium,
+            '&.Mui-expanded': {
+                fontWeight: theme.typography.fontWeightRegular,
+            },
+            '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+            },
+            '&.Mui-focused, &.Mui-selected, &.Mui-selected.Mui-focused': {
+                backgroundColor: `var(--tree-view-bg-color, ${theme.palette.action.selected})`,
+                color: 'var(--tree-view-color)',
+            },
+            [`& .${treeItemClasses.label}`]: {
+                fontWeight: 'inherit',
+                color: 'inherit',
+            }
+        },
+        [`& .${treeItemClasses.group}`]: {
+            marginLeft: '1.5rem',
+            [`& .${treeItemClasses.content}`]: {
+                paddingLeft: theme.spacing(2)
+            }
+        }
+    }))
+
+    function StyledTreeItem(props) {
+        const {labelInfo, labelText, editing, onEdit, parents, ...other} = props
+
+        return (
+            <StyledTreeItemRoot
+                label={
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                        <span>{labelText}</span>
+                        {labelInfo === null ? null : editing ?
+                            <TextField
+                                style={{marginRight: '1rem', fontSize: '0.9rem'}}
+                                hiddenLabel
+                                variant="outlined"
+                                size="small"
+                                defaultValue={get(editable, parents)}
+                                onBlur={e => onEdit(e.target.value)}
+                            /> : <span style={{marginRight: '1rem', fontSize: '0.9rem'}}>{labelInfo}</span>}
+                    </div>
+                }
+                {...other}
+            />
         )
     }
 
-    function fixedHeaderContent() {
+    const renderTree = (data, editing, parents) => {
+        return Object.keys(data).filter(e => !e.includes('fk_')).map((k, _, keys) => {
+            const id = data.iid + parents.join('') + k
+            if (typeof data[k] === 'object' && !treeKeys.current.includes(id)) {
+                treeKeys.current.push(id)
+            }
+            const edit = editing && typeof data[k] !== 'object' && (k !== 'iid' || (k === 'iid' && keys.length === 1))
+            return(
+                <StyledTreeItem key={id} nodeId={id} labelText={k} labelInfo={typeof data[k] !== 'object' ? data[k] : null} editing={edit} parents={parents.concat(k)}
+                                onEdit={(value) => setEditable(prevState => {
+                                    let p = parents.concat(k)
+                                    let o = p.reduceRight((obj, elem) => ({[elem]: obj}), value)
+                                    return {...prevState, ...o}
+                                })}>
+                    {typeof data[k] === 'object' ? renderTree(data[k], editing, parents.concat(k)) : null}
+                </StyledTreeItem>
+            )
+        })
+    }
+
+    const header = () => {
+        if (!upmsat.table || !upmsat.table.data || upmsat.table.data.length === 0) {
+            return null
+        }
         return (
-            <>
-                {Object.keys(upmsat.table[0]).map(column => {
-                    if (!column.includes('fk_') && isData(upmsat.table[0][column])) {
+            <div style={{display: 'flex', alignItems: 'center', padding: '0.5rem 1rem 1rem 1rem'}}>
+                {Object.keys(upmsat.table.data[0]).map(column => {
+                    if (!column.includes('fk_') && isData(upmsat.table.data[0][column])) {
                         return(
-                            <div key={column} style={{backgroundColor: 'background.paper', flex: 1, justifyContent: 'flex-start'}}>
+                            <div key={column} style={{flex: 1, justifyContent: 'flex-start'}}>
                                 <span>{column}</span>
                             </div>
                         )
@@ -106,16 +156,22 @@ function Data(props) {
                         return null
                     }
                 })}
-                <div style={{backgroundColor: 'background.paper', width: '3rem'}}/>
-            </>
+                <div style={{width: '3rem'}}/>
+            </div>
         )
     }
 
-    function rowContent(_index, row) {
+    function rowContent(index, row) {
         let columns = []
         return (
-            <>
-                <ListItemButton style={{height: '4rem'}} onClick={() => setOpen(prevState => prevState === undefined || prevState !== row['iid'] ? row['iid'] : undefined)}>
+            <Paper style={{marginBottom: '0.4rem'}}>
+                <ListItemButton style={{height: '3rem', width: '100%', padding: '0 1rem 0 1rem'}}
+                                onClick={() => {
+                                    treeKeys.current = []
+                                    setExpanded([])
+                                    !tm && setEditable(null)
+                                    setOpen(prevState => prevState === undefined || prevState !== row['iid'] ? row['iid'] : undefined)
+                                }}>
                     <div style={{display: 'flex', height: '100%', alignItems: 'center', width: '100%'}} >
                         {Object.keys(row).map(column => {
                             if (!column.includes('fk_') && isData(row[column])) {
@@ -135,13 +191,38 @@ function Data(props) {
                     </div>
                 </ListItemButton>
                 <Collapse in={open === row['iid']} timeout="auto" unmountOnExit>
-                    <div style={{margin: '1rem'}}>
-                        {columns.map(c => {
-                            return displayData(row, c, 0)
-                        })}
+                    <div style={{padding: '1rem', borderTop: '1px solid darkgray'}}>
+                        <div style={{marginBottom: '1rem', display: 'flex', justifyContent: 'space-between'}}>
+                            <Button onClick={() => setExpanded(oldExpanded => oldExpanded.length === 0 ? treeKeys.current.slice(0) : [])}>
+                                {expanded.length === 0 ? 'Expand all' : 'Collapse all'}
+                            </Button>
+                            {!tm ?
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    {editable !== null ? <span className="errorText" style={{fontSize: '0.9rem'}}>{upmsat.editError}</span> : null}
+                                    {editable !== null ? <Button style={{marginLeft: '1rem'}} onClick={() => setEditable(null)}>Cancel</Button> : null}
+                                    <Button style={{marginLeft: '1rem'}} variant="contained" startIcon={editable === null ? <EditIcon/> : upmsat.editLoading ? null : <SaveIcon/>}
+                                            onClick={() => {
+                                                if (editable !== null) {
+                                                    dispatch(editTelecommand(editable))
+                                                } else {
+                                                    setEditable(JSON.parse(JSON.stringify(row)))
+                                                }
+                                            }}>
+                                        {editable === null ? 'Edit' : upmsat.editLoading ? 'Loading' : 'Save'}
+                                    </Button>
+                                </div> : null}
+                        </div>
+                        <TreeView
+                            defaultCollapseIcon={<ExpandMore />}
+                            defaultExpandIcon={<ChevronRight />}
+                            expanded={expanded}
+                            onNodeToggle={(_, nodes) => setExpanded(nodes)}
+                        >
+                            {renderTree(row, editable !== null, [])}
+                        </TreeView>
                     </div>
                 </Collapse>
-            </>
+            </Paper>
         )
     }
 
@@ -170,15 +251,14 @@ function Data(props) {
                                 </Button>
                             </div>
                         </LocalizationProvider> : null}
-                    {upmsat.table && upmsat.table.length > 0 ?
-                        <Paper style={{flex: 1, margin: "0 2rem 2rem 2rem"}}>
-                            <TableVirtuoso
-                                data={upmsat.table}
-                                components={VirtuosoTableComponents}
-                                fixedHeaderContent={fixedHeaderContent}
+                    {upmsat.table && upmsat.table.data && upmsat.table.data.length > 0 && upmsat.table.name === (tm ? tm : 'tc') ?
+                        <div style={{flex: 1, margin: "0 2rem 2rem 2rem"}}>
+                            {header()}
+                            <Virtuoso
+                                data={upmsat.table.data}
                                 itemContent={rowContent}
                             />
-                        </Paper> : <p className="errorText">{upmsat.table ? 'No data available' : upmsat.tableError}</p>}
+                        </div> : <p className="errorText">{upmsat.table?.data?.length === 0 ? 'No data available' : upmsat.tableError}</p>}
                 </div> : <CircularProgress/>}
         </div>
     );

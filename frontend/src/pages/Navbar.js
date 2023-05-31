@@ -41,13 +41,10 @@ function Navbar() {
                     <div>
                         <Button
                             className="profileButton"
-                            aria-controls={anchorEl ? 'demo-positioned-menu' : undefined}
-                            aria-haspopup="true"
-                            aria-expanded={anchorEl ? 'true' : undefined}
                             onClick={handleClick}
+                            endIcon={<AccountCircleIcon />}
                         >
                             <span className="username">{user.username}</span>
-                            <AccountCircleIcon />
                         </Button>
                         <Menu
                             anchorEl={anchorEl}

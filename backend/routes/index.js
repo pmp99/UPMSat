@@ -330,38 +330,43 @@ router.post('/api/telecommand/edit/:id', authMiddleware, async (req, res, next) 
         const tc = await db.transaction(async (t) => {
             const currentTC = await models.TC_Type.findByPk(id, {include: tcInclude, transaction: t})
 
-            if (currentTC?.change_balloon_mode?.new_mode?.data !== req.body?.change_balloon_mode?.new_mode?.data) {
-                await models.Balloon_Mode.update({data: req.body?.change_balloon_mode?.new_mode?.data}, {
+            if (currentTC?.kind !== req.body.newTC?.kind) {
+                await models.TC_Type.update({kind: req.body.newTC?.kind}, {
+                    where: {iid: currentTC?.iid}, transaction: t
+                })
+            }
+            if (currentTC?.change_balloon_mode?.new_mode?.data !== req.body.newTC?.change_balloon_mode?.new_mode?.data) {
+                await models.Balloon_Mode.update({data: req.body.newTC?.change_balloon_mode?.new_mode?.data}, {
                     where: {iid: currentTC?.change_balloon_mode?.new_mode?.iid}, transaction: t
                 })
             }
-            if (currentTC?.control_experiment_heater?.heater_power?.data !== req.body?.control_experiment_heater?.heater_power?.data) {
-                await models.Heater_Power_Type.update({data: req.body?.control_experiment_heater?.heater_power?.data}, {
+            if (currentTC?.control_experiment_heater?.heater_power?.data !== req.body.newTC?.control_experiment_heater?.heater_power?.data) {
+                await models.Heater_Power_Type.update({data: req.body.newTC?.control_experiment_heater?.heater_power?.data}, {
                     where: {iid: currentTC?.control_experiment_heater?.heater_power?.iid}, transaction: t
                 })
             }
-            if (currentTC?.control_experiment_heater?.heater?.data !== req.body?.control_experiment_heater?.heater?.data) {
-                await models.Heater_ID.update({data: req.body?.control_experiment_heater?.heater?.data}, {
+            if (currentTC?.control_experiment_heater?.heater?.data !== req.body.newTC?.control_experiment_heater?.heater?.data) {
+                await models.Heater_ID.update({data: req.body.newTC?.control_experiment_heater?.heater?.data}, {
                     where: {iid: currentTC?.control_experiment_heater?.heater?.iid}, transaction: t
                 })
             }
-            if (currentTC?.start_manual_control?.heater?.data !== req.body?.start_manual_control?.heater?.data) {
-                await models.Heater_ID.update({data: req.body?.start_manual_control?.heater?.data}, {
+            if (currentTC?.start_manual_control?.heater?.data !== req.body.newTC?.start_manual_control?.heater?.data) {
+                await models.Heater_ID.update({data: req.body.newTC?.start_manual_control?.heater?.data}, {
                     where: {iid: currentTC?.start_manual_control?.heater?.iid}, transaction: t
                 })
             }
-            if (currentTC?.stop_manual_control?.heater?.data !== req.body?.stop_manual_control?.heater?.data) {
-                await models.Heater_ID.update({data: req.body?.stop_manual_control?.heater?.data}, {
+            if (currentTC?.stop_manual_control?.heater?.data !== req.body.newTC?.stop_manual_control?.heater?.data) {
+                await models.Heater_ID.update({data: req.body.newTC?.stop_manual_control?.heater?.data}, {
                     where: {iid: currentTC?.stop_manual_control?.heater?.iid}, transaction: t
                 })
             }
-            if (currentTC?.change_tm_mode?.new_mode?.data !== req.body?.change_tm_mode?.new_mode?.data) {
-                await models.TMTC_Mode.update({data: req.body?.change_tm_mode?.new_mode?.data}, {
+            if (currentTC?.change_tm_mode?.new_mode?.data !== req.body.newTC?.change_tm_mode?.new_mode?.data) {
+                await models.TMTC_Mode.update({data: req.body.newTC?.change_tm_mode?.new_mode?.data}, {
                     where: {iid: currentTC?.change_tm_mode?.new_mode?.iid}, transaction: t
                 })
             }
-            if (currentTC?.restart_device?.device_id?.data !== req.body?.restart_device?.device_id?.data) {
-                await models.Restartable_Device_ID.update({data: req.body?.restart_device?.device_id?.data}, {
+            if (currentTC?.restart_device?.device_id?.data !== req.body.newTC?.restart_device?.device_id?.data) {
+                await models.Restartable_Device_ID.update({data: req.body.newTC?.restart_device?.device_id?.data}, {
                     where: {iid: currentTC?.restart_device?.device_id?.iid}, transaction: t
                 })
             }
