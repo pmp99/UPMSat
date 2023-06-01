@@ -10,6 +10,18 @@
 
 .tableTitle {
     text-align: center;
+    animation: slide-in-bottom 0.3s ease-in-out both;
+}
+
+@keyframes slide-in-bottom {
+    0% {
+        transform: translateY(0.5rem);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .container {

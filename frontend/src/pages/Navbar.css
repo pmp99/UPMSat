@@ -1,7 +1,7 @@
 .navbar {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     background-color: #fff;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     height: 4rem;
@@ -11,13 +11,14 @@
 .navbarLogo {
     font-size: 1.6rem;
     font-weight: bold;
-    margin-right: auto;
     text-decoration: none;
     color: black;
 }
 
 .navbarButtons {
     display: flex;
+    flex: 1;
+    justify-content: flex-end;
     gap: 1.5rem;
     height: 60%;
 }

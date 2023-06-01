@@ -6,11 +6,12 @@ import {Button, ListItemIcon, Menu, MenuItem} from "@mui/material";
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import EditIcon from '@mui/icons-material/Edit';
-import {Link, useNavigate} from "react-router-dom";
+import {Link, useLocation, useNavigate} from "react-router-dom";
 
 function Navbar() {
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const location = useLocation()
     const [anchorEl, setAnchorEl] = useState(null)
     const auth = useSelector(state => state.auth)
     const user = auth.user
@@ -33,7 +34,11 @@ function Navbar() {
 
     return (
         <nav className="navbar">
-            <Link className="navbarLogo" to={'/'}>UPMSat</Link>
+            <div style={{flex: 1}}>
+                <Link className="navbarLogo" to={'/'}>UPMSat</Link>
+            </div>
+            {location.pathname === '/' ? null :
+                <h1 className="tableTitle">{location.pathname.includes('hk') ? 'Housekeeping Telemetry' : location.pathname.includes('sc') ? 'Scientific Telemetry' : location.pathname.includes('telecommand') ? 'Telecommand' : ''}</h1>}
             <div className="navbarButtons">
                 {!user && auth.userLoaded && <Button onClick={() => navigate('login')}>Log in</Button>}
                 {!user && auth.userLoaded && <Button variant="contained" onClick={() => navigate('register')}>Register</Button>}

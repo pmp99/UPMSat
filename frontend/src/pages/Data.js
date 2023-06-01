@@ -229,8 +229,7 @@ function Data(props) {
     return (
         <div className="container">
             {!upmsat.loading ?
-                <div style={{width: '100%', flex: 1, display: 'flex', flexDirection: 'column'}}>
-                    <h1 className="tableTitle">{tm === 'hk' ? 'Housekeeping Telemetry' : tm === 'sc' ? 'Scientific Telemetry' : 'Telecommand'}</h1>
+                <div style={{width: '100%', flex: 1, display: 'flex', flexDirection: 'column', marginTop: '2rem'}}>
                     {tm ?
                         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
                             <div style={{display: 'flex', flexDirection: 'row', margin: "0 2rem 1.5rem 2rem", gap: '1rem'}}>
