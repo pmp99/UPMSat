@@ -16,12 +16,16 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import Collapse from '@mui/material/Collapse';
 import ListItemButton from '@mui/material/ListItemButton';
 import TreeItem, {treeItemClasses} from '@mui/lab/TreeItem';
 import TreeView from '@mui/lab/TreeView';
 import {styled} from '@mui/material/styles';
-import {get} from 'lodash';
+import {get, isEqual} from 'lodash';
+import Fade from '@mui/material/Fade';
+import Modal from '@mui/base/Modal';
+import {LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer} from 'recharts';
 
 function Data(props) {
     const dispatch = useDispatch()
@@ -33,6 +37,8 @@ function Data(props) {
     const treeKeys = useRef([])
     const [expanded, setExpanded] = useState([])
     const [editable, setEditable] = useState(null)
+    const [plotOpened, setPlotOpened] = useState(false)
+    const [plotVar, setPlotVar] = useState(null)
     const {tm} = props
 
     useEffect(() => {
@@ -63,6 +69,38 @@ function Data(props) {
         return typeof d !== 'object' ? d : (d['data'] !== undefined ? d['data'] : d['iid'])
     }
 
+    const StyledModal = styled(Modal)`
+      position: fixed;
+      z-index: 1300;
+      right: 0;
+      bottom: 0;
+      top: 0;
+      left: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    const Backdrop = React.forwardRef((props, ref) => {
+        const { open, ...other } = props
+        return (
+            <Fade in={open}>
+                <div ref={ref} {...other} />
+            </Fade>
+        )
+    })
+
+    const StyledBackdrop = styled(Backdrop)`
+      z-index: -1;
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      top: 0;
+      left: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      -webkit-tap-highlight-color: transparent;
+    `;
+
     const StyledTreeItemRoot = styled(TreeItem)(({ theme }) => ({
         color: theme.palette.text.secondary,
         [`& .${treeItemClasses.content}`]: {
@@ -90,7 +128,7 @@ function Data(props) {
         [`& .${treeItemClasses.group}`]: {
             marginLeft: '1.5rem',
             [`& .${treeItemClasses.content}`]: {
-                paddingLeft: theme.spacing(2)
+                paddingLeft: '1rem'
             }
         }
     }))
@@ -100,9 +138,18 @@ function Data(props) {
 
         return (
             <StyledTreeItemRoot
+                onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    if (tm && labelInfo !== null) {
+                        setPlotVar(prevState => isEqual(prevState, parents) ? null : parents)
+                    }
+                }}
                 label={
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                        <span>{labelText}</span>
+                        <div style={{display: 'flex', alignItems: 'center'}}>
+                            <span>{labelText}</span>
+                            {isEqual(parents, plotVar) ? <BarChartIcon style={{marginLeft: '1.5rem'}} fontSize={'small'}/> : null}
+                        </div>
                         {labelInfo === null ? null : editing ?
                             <TextField
                                 style={{marginRight: '1rem', fontSize: '0.9rem'}}
@@ -132,7 +179,7 @@ function Data(props) {
                                     let p = parents.concat(k)
                                     let o = p.reduceRight((obj, elem) => ({[elem]: obj}), value)
                                     return {...prevState, ...o}
-                                })}>
+                                })} >
                     {typeof data[k] === 'object' ? renderTree(data[k], editing, parents.concat(k)) : null}
                 </StyledTreeItem>
             )
@@ -226,10 +273,54 @@ function Data(props) {
         )
     }
 
+    const loaded = upmsat.table && upmsat.table.data && upmsat.table.data.length > 0 && upmsat.table.name === (tm ? tm : 'tc')
+    let dateTimeOptions
+    if (loaded && tm) {
+        const startDate = new Date(1000*upmsat.table.data[0]['timestamp_secs']['data'])
+        const endDate = new Date(1000*upmsat.table.data[upmsat.table.data.length-1]['timestamp_secs']['data'])
+        const differentYear = startDate.getFullYear() !== endDate.getFullYear()
+        const differentMonth = differentYear ? true : startDate.getMonth() !== endDate.getMonth()
+        const differentDay = differentMonth ? true : startDate.getDay() !== endDate.getDay()
+        dateTimeOptions = {
+            year: differentYear ? "2-digit" : undefined,
+            month: differentMonth ? "2-digit" : undefined,
+            day: differentDay ? "numeric" : undefined,
+            hour: differentMonth ? undefined : 'numeric',
+            minute: differentMonth ? undefined : 'numeric',
+            second: differentDay ? undefined : 'numeric'
+        }
+    }
+
     return (
         <div className="container">
             {!upmsat.loading ?
                 <div style={{width: '100%', flex: 1, display: 'flex', flexDirection: 'column', marginTop: '2rem'}}>
+                    {loaded && tm ?
+                        <StyledModal
+                            open={plotOpened}
+                            onClose={() => setPlotOpened(false)}
+                            closeAfterTransition
+                            slots={{backdrop: StyledBackdrop}}
+                        >
+                            <Fade in={plotVar !== null && plotOpened}>
+                                <div style={{position: 'absolute', top: '12%', left: '10%', bottom: '12%', right: '10%', borderRadius: '1rem',
+                                    padding: '2rem', backgroundColor: 'white', boxShadow: '0px 2px 24px #383838'}}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart
+                                            data={upmsat.table.data.map(e => ({x: e['timestamp_secs']['data'], y: get(e, plotVar)}))}
+                                            margin={{top: 10, right: 30, left: 20, bottom: 5}}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="x" tickFormatter={(v) => new Intl.DateTimeFormat('es-ES', dateTimeOptions).format(1000*v)}/>
+                                            <YAxis />
+                                            <Tooltip />
+                                            <Legend formatter={() => plotVar.join(' -> ')} />
+                                            <Line type="natural" dataKey="y" stroke="#82ca9d" strokeWidth={2}/>
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Fade>
+                        </StyledModal> : null}
                     {tm ?
                         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
                             <div style={{display: 'flex', flexDirection: 'row', margin: "0 2rem 1.5rem 2rem", gap: '1rem'}}>
@@ -248,12 +339,18 @@ function Data(props) {
                                 <Button variant={'outlined'} onClick={() => auth.user && dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))}>
                                     <RefreshRoundedIcon/>
                                 </Button>
+                                <Fade in={plotVar !== null}>
+                                    <Button style={{marginLeft: 'auto'}} variant={'contained'} onClick={() => setPlotOpened(true)}>
+                                        <BarChartIcon/>
+                                    </Button>
+                                </Fade>
                             </div>
                         </LocalizationProvider> : null}
-                    {upmsat.table && upmsat.table.data && upmsat.table.data.length > 0 && upmsat.table.name === (tm ? tm : 'tc') ?
-                        <div style={{flex: 1, margin: "0 2rem 2rem 2rem"}}>
+                    {loaded ?
+                        <div style={{flex: 1, margin: "0 2rem 2rem 2rem", display: 'flex', flexDirection: 'column'}}>
                             {header()}
                             <Virtuoso
+                                style={{flex: 1}}
                                 data={upmsat.table.data}
                                 itemContent={rowContent}
                             />
