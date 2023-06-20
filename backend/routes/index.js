@@ -37,10 +37,6 @@ const authMiddleware = (req, res, next) => {
     }
 }
 
-/* GET home page. */
-router.get('/', (req, res, next) => {
-  res.render('index', {title: 'UPMSat'})
-})
 
 router.post('/auth/register', signupValidation, (req, res, next) => {
     const validationErrors = validationResult(req)
@@ -165,7 +161,7 @@ const dateIntervalMiddleware = (req, res, next) => {
 }
 
 
-router.get('/api/telemetry/:type', authMiddleware, dateIntervalMiddleware, (req, res, next) => {
+router.get('/telemetry/:type', authMiddleware, dateIntervalMiddleware, (req, res, next) => {
     let type = req.params.type.toLowerCase()
     if (type !== 'hk' && type !== 'sc') {
         return res.status(400).send({msg: "Incorrect telemetry type"})
@@ -261,11 +257,11 @@ router.get('/api/telemetry/:type', authMiddleware, dateIntervalMiddleware, (req,
     ]
 
     if (type === 'sc') {
-        models.SC_TM_Type.findAll({include: scInclude})
+        models.SC_TM_Type.findAll({include: scInclude, order: [["iid", "DESC"]]})
             .then(r => res.send(r))
             .catch(error => res.status(400).send({msg: error.message}))
     } else {
-        models.HK_TM_Type.findAll({include: hkInclude})
+        models.HK_TM_Type.findAll({include: hkInclude, order: [["iid", "DESC"]]})
             .then(r => res.send(r))
             .catch(error => res.status(400).send({msg: error.message}))
     }
@@ -281,17 +277,17 @@ const tcInclude = [
     {model: models.TC_Restart_Device, as: 'restart_device', include: [{model: models.Restartable_Device_ID, as: 'device_id'}]}
 ]
 
-router.get('/api/telecommand', authMiddleware, (req, res, next) => {
-    models.TC_Type.findAll({include: tcInclude})
+router.get('/telecommand', authMiddleware, (req, res, next) => {
+    models.TC_Type.findAll({include: tcInclude, order: [["iid", "DESC"]]})
         .then(r => res.send(r))
         .catch(error => res.status(400).send({msg: error.message}))
 })
 
-router.get('/api/telecommand/kind', authMiddleware, (req, res, next) => {
+router.get('/telecommand/kind', authMiddleware, (req, res, next) => {
     res.send(telecommandKind)
 })
 
-router.post('/api/telecommand/:id', authMiddleware, async (req, res, next) => {
+router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
     const id = parseInt(req.params.id)
 
     try{
@@ -343,7 +339,7 @@ router.post('/api/telecommand/:id', authMiddleware, async (req, res, next) => {
     }
 })
 
-router.post('/api/telecommand', authMiddleware, async (req, res, next) => {
+router.post('/telecommand', authMiddleware, async (req, res, next) => {
     const {kind, data, data2} = req.body
     const type = telecommandKind[kind]
     if (!type) {
@@ -391,7 +387,7 @@ router.post('/api/telecommand', authMiddleware, async (req, res, next) => {
     }
 })
 
-router.delete('/api/telecommand/:id', authMiddleware, async (req, res, next) => {
+router.delete('/telecommand/:id', authMiddleware, async (req, res, next) => {
     const id = parseInt(req.params.id)
     models.TC_Type.destroy({where: {iid: id}})
         .then(_ => res.send({msg: 'Deleted TC', id: id}))

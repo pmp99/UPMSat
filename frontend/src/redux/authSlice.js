@@ -8,7 +8,7 @@ export const login = createAsyncThunk(
     'auth/login',
     async (user, {rejectWithValue}) => {
         try{
-            const res = await axios.post('https://localhost:8443/auth/login', {username: user.username, password: user.password})
+            const res = await axios.post('https://localhost:8443/api/auth/login', {username: user.username, password: user.password})
             return res.data
         } catch (error) {
             return rejectWithValue(error.response.data)
@@ -20,7 +20,7 @@ export const logout = createAsyncThunk(
     'auth/logout',
     async (_, {rejectWithValue}) => {
         try{
-            const res = await axios.get('https://localhost:8443/auth/logout')
+            const res = await axios.get('https://localhost:8443/api/auth/logout')
             return res.data
         } catch (error) {
             return rejectWithValue(error.response.data)
@@ -32,7 +32,7 @@ export const register = createAsyncThunk(
     'auth/register',
     async (user, {rejectWithValue}) => {
         try{
-            const res = await axios.post('https://localhost:8443/auth/register', {username: user.username, email: user.email, password: user.password, confirmPassword: user.confirmPassword})
+            const res = await axios.post('https://localhost:8443/api/auth/register', {username: user.username, email: user.email, password: user.password, confirmPassword: user.confirmPassword})
             return res.data
         } catch (error) {
             return rejectWithValue(error.response.data)
@@ -44,7 +44,7 @@ export const getUser = createAsyncThunk(
     'auth/getUser',
     async (_, {rejectWithValue}) => {
         try{
-            const res = await axios.get('https://localhost:8443/auth/get-user')
+            const res = await axios.get('https://localhost:8443/api/auth/get-user')
             return res.data
         } catch (error) {
             return rejectWithValue(error.response.data)

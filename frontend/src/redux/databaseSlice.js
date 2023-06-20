@@ -125,7 +125,7 @@ const databaseSlice = createSlice({
         builder.addCase(createTelecommand.fulfilled, (state, action) => {
             state.createLoading = false
             if (state.table.name === 'tc') {
-                state.table.data.push(action.payload)
+                state.table.data.unshift(action.payload)
             }
             state.createError = null
         })
