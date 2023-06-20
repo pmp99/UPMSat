@@ -297,7 +297,6 @@ router.post('/api/telecommand/:id', authMiddleware, async (req, res, next) => {
     try{
         const tc = await db.transaction(async (t) => {
             const currentTC = await models.TC_Type.findByPk(id, {include: tcInclude, transaction: t})
-
             const edit = telecommandKind[currentTC?.kind]
 
             if (currentTC?.change_balloon_mode?.new_mode?.data !== req.body.newTC?.change_balloon_mode?.new_mode?.data && edit === 'change_balloon_mode') {
@@ -354,54 +353,35 @@ router.post('/api/telecommand', authMiddleware, async (req, res, next) => {
     try{
         const tc = await db.transaction(async (t) => {
             if (type === 'change_balloon_mode') {
-                let maxId = await models.Balloon_Mode.max('iid', {transaction: t})
-                const newData = await models.Balloon_Mode.create({iid: maxId+1, data: data}, {transaction: t})
-                maxId = await models.TC_Change_Balloon_Mode.max('iid', {transaction: t})
-                const tcType = await models.TC_Change_Balloon_Mode.create({iid: maxId+1, fk_new_mode_iid: newData.iid}, {transaction: t})
-                maxId = await models.TC_Type.max('iid', {transaction: t})
-                const telecommand = await models.TC_Type.create({iid: maxId+1, kind: kind, fk_change_balloon_mode_iid: tcType.iid}, {transaction: t})
+                const newData = await models.Balloon_Mode.create({data: data}, {transaction: t})
+                const tcType = await models.TC_Change_Balloon_Mode.create({fk_new_mode_iid: newData.iid}, {transaction: t})
+                const telecommand = await models.TC_Type.create({kind: kind, fk_change_balloon_mode_iid: tcType.iid}, {transaction: t})
                 return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Change_Balloon_Mode, as: 'change_balloon_mode', include: [{model: models.Balloon_Mode, as: 'new_mode'}]}})
             } else if (type === 'start_manual_control') {
-                let maxId = await models.Heater_ID.max('iid', {transaction: t})
-                const newData = await models.Heater_ID.create({iid: maxId+1, data: data}, {transaction: t})
-                maxId = await models.TC_Start_Manual_Control.max('iid', {transaction: t})
-                const tcType = await models.TC_Start_Manual_Control.create({iid: maxId+1, fk_heater_iid: newData.iid}, {transaction: t})
-                maxId = await models.TC_Type.max('iid', {transaction: t})
-                const telecommand = await models.TC_Type.create({iid: maxId+1, kind: kind, fk_start_manual_control_iid: tcType.iid}, {transaction: t})
+                const newData = await models.Heater_ID.create({data: data}, {transaction: t})
+                const tcType = await models.TC_Start_Manual_Control.create({fk_heater_iid: newData.iid}, {transaction: t})
+                const telecommand = await models.TC_Type.create({kind: kind, fk_start_manual_control_iid: tcType.iid}, {transaction: t})
                 return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Start_Manual_Control, as: 'start_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]}})
             } else if (type === 'stop_manual_control') {
-                let maxId = await models.Heater_ID.max('iid', {transaction: t})
-                const newData = await models.Heater_ID.create({iid: maxId+1, data: data}, {transaction: t})
-                maxId = await models.TC_Stop_Manual_Control.max('iid', {transaction: t})
-                const tcType = await models.TC_Stop_Manual_Control.create({iid: maxId+1, fk_heater_iid: newData.iid}, {transaction: t})
-                maxId = await models.TC_Type.max('iid', {transaction: t})
-                const telecommand = await models.TC_Type.create({iid: maxId+1, kind: kind, fk_stop_manual_control_iid: tcType.iid}, {transaction: t})
+                const newData = await models.Heater_ID.create({data: data}, {transaction: t})
+                const tcType = await models.TC_Stop_Manual_Control.create({fk_heater_iid: newData.iid}, {transaction: t})
+                const telecommand = await models.TC_Type.create({kind: kind, fk_stop_manual_control_iid: tcType.iid}, {transaction: t})
                 return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Stop_Manual_Control, as: 'stop_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]}})
             } else if (type === 'control_experiment_heater') {
-                let maxId = await models.Heater_ID.max('iid', {transaction: t})
-                const newData = await models.Heater_ID.create({iid: maxId+1, data: data}, {transaction: t})
-                maxId = await models.Heater_Power_Type.max('iid', {transaction: t})
-                const power = await models.Heater_Power_Type.create({iid: maxId+1, data: data2}, {transaction: t})
-                maxId = await models.TC_Control_Experiment_Heater.max('iid', {transaction: t})
-                const tcType = await models.TC_Control_Experiment_Heater.create({iid: maxId+1, fk_heater_iid: newData.iid, fk_heater_power_iid: power.iid}, {transaction: t})
-                maxId = await models.TC_Type.max('iid', {transaction: t})
-                const telecommand = await models.TC_Type.create({iid: maxId+1, kind: kind, fk_control_experiment_heater_iid: tcType.iid}, {transaction: t})
+                const newData = await models.Heater_ID.create({data: data}, {transaction: t})
+                const power = await models.Heater_Power_Type.create({data: data2}, {transaction: t})
+                const tcType = await models.TC_Control_Experiment_Heater.create({fk_heater_iid: newData.iid, fk_heater_power_iid: power.iid}, {transaction: t})
+                const telecommand = await models.TC_Type.create({kind: kind, fk_control_experiment_heater_iid: tcType.iid}, {transaction: t})
                 return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Control_Experiment_Heater, as: 'control_experiment_heater', include: [{model: models.Heater_ID, as: 'heater'}, {model: models.Heater_Power_Type, as: 'heater_power'}]}})
             } else if (type === 'restart_device') {
-                let maxId = await models.Restartable_Device_ID.max('iid', {transaction: t})
-                const newData = await models.Restartable_Device_ID.create({iid: maxId+1, data: data}, {transaction: t})
-                maxId = await models.TC_Restart_Device.max('iid', {transaction: t})
-                const tcType = await models.TC_Restart_Device.create({iid: maxId+1, fk_device_id_iid: newData.iid}, {transaction: t})
-                maxId = await models.TC_Type.max('iid', {transaction: t})
-                const telecommand = await models.TC_Type.create({iid: maxId+1, kind: kind, fk_restart_device_iid: tcType.iid}, {transaction: t})
+                const newData = await models.Restartable_Device_ID.create({data: data}, {transaction: t})
+                const tcType = await models.TC_Restart_Device.create({fk_device_id_iid: newData.iid}, {transaction: t})
+                const telecommand = await models.TC_Type.create({kind: kind, fk_restart_device_iid: tcType.iid}, {transaction: t})
                 return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Restart_Device, as: 'restart_device', include: [{model: models.Restartable_Device_ID, as: 'device_id'}]}})
             } else if (type === 'change_tm_mode') {
-                let maxId = await models.TMTC_Mode.max('iid', {transaction: t})
-                const newData = await models.TMTC_Mode.create({iid: maxId+1, data: data}, {transaction: t})
-                maxId = await models.TC_Change_TM_Mode.max('iid', {transaction: t})
-                const tcType = await models.TC_Change_TM_Mode.create({iid: maxId+1, fk_new_mode_iid: newData.iid}, {transaction: t})
-                maxId = await models.TC_Type.max('iid', {transaction: t})
-                const telecommand = await models.TC_Type.create({iid: maxId+1, kind: kind, fk_change_tm_mode_iid: tcType.iid}, {transaction: t})
+                const newData = await models.TMTC_Mode.create({data: data}, {transaction: t})
+                const tcType = await models.TC_Change_TM_Mode.create({fk_new_mode_iid: newData.iid}, {transaction: t})
+                const telecommand = await models.TC_Type.create({kind: kind, fk_change_tm_mode_iid: tcType.iid}, {transaction: t})
                 return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Change_TM_Mode, as: 'change_tm_mode', include: [{model: models.TMTC_Mode, as: 'new_mode'}]}})
             }
         })
@@ -413,42 +393,9 @@ router.post('/api/telecommand', authMiddleware, async (req, res, next) => {
 
 router.delete('/api/telecommand/:id', authMiddleware, async (req, res, next) => {
     const id = parseInt(req.params.id)
-
-    try{
-        const tc = await db.transaction(async (t) => {
-            const currentTC = await models.TC_Type.findByPk(id, {include: tcInclude, transaction: t})
-            await models.TC_Type.destroy({where: {iid: currentTC?.iid}, transaction: t})
-            if (currentTC?.change_balloon_mode) {
-                await models.TC_Change_Balloon_Mode.destroy({where: {iid: currentTC?.fk_change_balloon_mode_iid}, transaction: t})
-                await models.Balloon_Mode.destroy({where: {iid: currentTC?.change_balloon_mode?.fk_new_mode_iid}, transaction: t})
-            }
-            if (currentTC?.start_manual_control) {
-                await models.TC_Start_Manual_Control.destroy({where: {iid: currentTC?.fk_start_manual_control_iid}, transaction: t})
-                await models.Heater_ID.destroy({where: {iid: currentTC?.start_manual_control?.fk_heater_iid}, transaction: t})
-            }
-            if (currentTC?.stop_manual_control) {
-                await models.TC_Stop_Manual_Control.destroy({where: {iid: currentTC?.fk_stop_manual_control_iid}, transaction: t})
-                await models.Heater_ID.destroy({where: {iid: currentTC?.stop_manual_control?.fk_heater_iid}, transaction: t})
-            }
-            if (currentTC?.control_experiment_heater) {
-                await models.TC_Control_Experiment_Heater.destroy({where: {iid: currentTC?.fk_control_experiment_heater_iid}, transaction: t})
-                await models.Heater_ID.destroy({where: {iid: currentTC?.control_experiment_heater?.fk_heater_iid}, transaction: t})
-                await models.Heater_Power_Type.destroy({where: {iid: currentTC?.control_experiment_heater?.fk_heater_power_iid}, transaction: t})
-            }
-            if (currentTC?.restart_device) {
-                await models.TC_Restart_Device.destroy({where: {iid: currentTC?.fk_restart_device_iid}, transaction: t})
-                await models.Restartable_Device_ID.destroy({where: {iid: currentTC?.restart_device?.fk_device_id_iid}, transaction: t})
-            }
-            if (currentTC?.change_tm_mode) {
-                await models.TC_Change_TM_Mode.destroy({where: {iid: currentTC?.fk_change_tm_mode_iid}, transaction: t})
-                await models.TMTC_Mode.destroy({where: {iid: currentTC?.restart_device?.fk_new_mode_iid}, transaction: t})
-            }
-            return currentTC?.iid
-        })
-        res.send({msg: 'Deleted TC', id: tc})
-    } catch(error) {
-        res.status(400).send({msg: error.message})
-    }
+    models.TC_Type.destroy({where: {iid: id}})
+        .then(_ => res.send({msg: 'Deleted TC', id: id}))
+        .catch(error => res.status(400).send({msg: error.message}))
 })
 
 

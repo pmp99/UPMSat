@@ -4,7 +4,8 @@ module.exports = function(sequelize, DataTypes) {
     iid: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      primaryKey: true
+      primaryKey: true,
+      autoIncrement: true
     },
     fk_photodiodes_iid: {
       type: DataTypes.INTEGER,

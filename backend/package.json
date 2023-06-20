@@ -17,8 +17,8 @@
     "http-errors": "^2.0.0",
     "jsonwebtoken": "^9.0.0",
     "morgan": "^1.10.0",
-    "mysql2": "^3.3.3",
-    "sequelize": "^6.32.0",
+    "mysql2": "^3.4.0",
+    "sequelize": "^6.32.1",
     "supervisor": "^0.12.0"
   }
 }

@@ -36,8 +36,8 @@ import {styled} from '@mui/material/styles';
 import {get, isEqual} from 'lodash';
 import Fade from '@mui/material/Fade';
 import Modal from '@mui/base/Modal';
-import {LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer} from 'recharts';
 import CreateTC from "./CreateTC";
+import Plot from "./Plot";
 
 function Data(props) {
     const dispatch = useDispatch()
@@ -57,7 +57,7 @@ function Data(props) {
     const [expanded, setExpanded] = useState([])
     const [editable, setEditable] = useState(null)
     const [modalOpened, setModalOpened] = useState(false)
-    const [plotVar, setPlotVar] = useState(null)
+    const [plotVars, setPlotVars] = useState([])
     const [tcToDelete, setTcToDelete] = useState(null)
     const [errorOpened, setErrorOpened] = useState(false)
     const [errorMessage, setErrorMessage] = useState()
@@ -76,16 +76,15 @@ function Data(props) {
     useEffect(() => {
         editable !== null && setEditable(null)
         tcToDelete !== null && setTcToDelete(null)
+        modalOpened && setModalOpened(false)
     }, [table?.data])
 
     useEffect(() => {
         if (loadedRef.current && editable !== null && editError !== null) {
-            setErrorMessage(editError)
-            setErrorOpened(true)
+            showMessage(editError)
             loadedRef.current = false
         } else if (loadedRef.current && tcToDelete !== null && deleteError !== null) {
-            setErrorMessage(deleteError)
-            setErrorOpened(true)
+            showMessage(deleteError)
             loadedRef.current = false
         }
     }, [editError, deleteError])
@@ -95,6 +94,11 @@ function Data(props) {
             loadedRef.current = true
         }
     }, [editLoading, deleteLoading])
+
+    function showMessage(message) {
+        setErrorMessage(message)
+        setErrorOpened(true)
+    }
 
     if (!auth.user && auth.userLoaded) {
         return <Navigate to={'/'} replace={true}/>
@@ -127,7 +131,7 @@ function Data(props) {
     `;
 
     const Backdrop = React.forwardRef((props, ref) => {
-        const { open, ...other } = props
+        const {open, ...other} = props
         return (
             <Fade in={open}>
                 <div ref={ref} {...other} />
@@ -186,14 +190,26 @@ function Data(props) {
                 onDoubleClick={(e) => {
                     e.stopPropagation()
                     if (tm && labelInfo !== null) {
-                        setPlotVar(prevState => isEqual(prevState, parents) ? null : parents)
+                        setPlotVars(prevState => {
+                            let index = prevState.findIndex(e => isEqual(e, parents))
+                            if (index > -1) {
+                                return prevState.filter((_, i) => i !== index)
+                            } else {
+                                if (prevState.length >= 4) {
+                                    showMessage("Maximum number of data series is 4")
+                                    return prevState
+                                } else {
+                                    return [...prevState, parents]
+                                }
+                            }
+                        })
                     }
                 }}
                 label={
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                         <div style={{display: 'flex', alignItems: 'center'}}>
                             <span>{labelText}</span>
-                            {isEqual(parents, plotVar) ? <BarChartIcon style={{marginLeft: '1.5rem'}} fontSize={'small'}/> : null}
+                            {plotVars.some(e => isEqual(parents, e)) ? <BarChartIcon style={{marginLeft: '1.5rem'}} fontSize={'small'}/> : null}
                         </div>
                         {labelInfo === null ? null : editing ?
                             <TextField
@@ -220,7 +236,7 @@ function Data(props) {
             if (typeof data[k] === 'object' && !treeKeys.current.includes(id)) {
                 treeKeys.current.push(id)
             }
-            const edit = editing && typeof data[k] !== 'object' && (k !== 'iid' || (k === 'iid' && keys.length === 1))
+            const edit = editing && typeof data[k] !== 'object' && k === 'data'
             return(
                 <StyledTreeItem key={id} nodeId={id} labelText={k} labelInfo={typeof data[k] !== 'object' ? data[k] : null} editing={edit} parents={parents.concat(k)}
                                 onEdit={(value) => setEditable(prevState => {
@@ -333,28 +349,12 @@ function Data(props) {
     }
 
     const loaded = table && table.data && table.data.length > 0 && table.name === (tm ? tm : 'tc')
-    let dateTimeOptions
-    if (loaded && tm) {
-        const startDate = new Date(1000*table.data[0]['timestamp_secs']['data'])
-        const endDate = new Date(1000*table.data[table.data.length-1]['timestamp_secs']['data'])
-        const differentYear = startDate.getFullYear() !== endDate.getFullYear()
-        const differentMonth = differentYear ? true : startDate.getMonth() !== endDate.getMonth()
-        const differentDay = differentMonth ? true : startDate.getDay() !== endDate.getDay()
-        dateTimeOptions = {
-            year: differentYear ? "2-digit" : undefined,
-            month: differentMonth ? "2-digit" : undefined,
-            day: differentDay ? "numeric" : undefined,
-            hour: differentMonth ? undefined : 'numeric',
-            minute: differentMonth ? undefined : 'numeric',
-            second: differentDay ? undefined : 'numeric'
-        }
-    }
 
     return (
         <div className="container">
             {!loading ?
                 <div style={{width: '100%', flex: 1, display: 'flex', flexDirection: 'column', marginTop: '2rem'}}>
-                    {loaded && !tm ?
+                    {loaded ?
                         <Snackbar
                             open={errorOpened}
                             autoHideDuration={4000}
@@ -372,24 +372,7 @@ function Data(props) {
                             closeAfterTransition
                             slots={{backdrop: StyledBackdrop}}
                         >
-                            <Fade in={plotVar !== null && modalOpened}>
-                                <div style={{position: 'absolute', top: '12%', left: '10%', bottom: '12%', right: '10%', borderRadius: '1rem',
-                                    padding: '2rem', backgroundColor: 'white', boxShadow: '0px 2px 24px #383838'}}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart
-                                            data={table.data.map(e => ({x: e['timestamp_secs']['data'], y: get(e, plotVar)}))}
-                                            margin={{top: 10, right: 30, left: 20, bottom: 5}}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="x" tickFormatter={(v) => new Intl.DateTimeFormat('es-ES', dateTimeOptions).format(1000*v)}/>
-                                            <YAxis />
-                                            <Tooltip />
-                                            <Legend formatter={() => plotVar.join(' -> ')} />
-                                            <Line type="natural" dataKey="y" stroke="#82ca9d" strokeWidth={2}/>
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </Fade>
+                            <Plot plotVars={plotVars} modalOpened={modalOpened} data={table.data} />
                         </StyledModal> : null}
                     {loaded && !tm && tcKind ?
                         <StyledModal
@@ -398,7 +381,7 @@ function Data(props) {
                             closeAfterTransition
                             slots={{backdrop: StyledBackdrop}}
                         >
-                            <CreateTC modalOpened={modalOpened} tcKind={tcKind} closeModal={() => setModalOpened(false)}/>
+                            <CreateTC modalOpened={modalOpened} tcKind={tcKind} />
                         </StyledModal> : null}
                     {loaded && !tm ?
                         <Dialog open={tcToDelete !== null} onClose={() => setTcToDelete(null)}>
@@ -431,7 +414,7 @@ function Data(props) {
                                 <Button variant={'outlined'} onClick={() => auth.user && dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))}>
                                     <RefreshRoundedIcon/>
                                 </Button>
-                                <Fade in={plotVar !== null}>
+                                <Fade in={plotVars.length > 0}>
                                     <Button style={{marginLeft: 'auto'}} variant={'contained'} onClick={() => setModalOpened(true)}>
                                         <BarChartIcon/>
                                     </Button>

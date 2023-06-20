@@ -4,7 +4,7 @@ module.exports = function(sequelize, DataTypes) {
     iid: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      primaryKey: true
+      primaryKey: true,
     },
     fk_accel_offset_x_iid: {
       type: DataTypes.INTEGER,

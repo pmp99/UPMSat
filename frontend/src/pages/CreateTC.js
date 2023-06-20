@@ -13,22 +13,19 @@ function CreateTC(props) {
     const [data2, setData2] = useState()
     const [errorOpened, setErrorOpened] = useState(false)
     const loaded = useRef(false)
-    const {modalOpened, tcKind, closeModal} = props
-
-    useEffect(() => {
-        if (loaded.current && error !== null) {
-            setErrorOpened(true)
-            loaded.current = false
-        } else if (loaded.current && error === null) {
-            closeModal()
-        }
-    }, [error])
+    const {modalOpened, tcKind} = props
 
     useEffect(() => {
         if (loading) {
             loaded.current = true
         }
     }, [loading])
+
+    useEffect(() => {
+        if (loaded.current && error !== null) {
+            setErrorOpened(true)
+        }
+    }, [error])
 
     const label = (kind) => {
         switch(kind) {
