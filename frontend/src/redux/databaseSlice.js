@@ -3,7 +3,7 @@ import axios from "axios";
 axios.defaults.withCredentials = true
 
 const initialState = {table: null, tableError: null, loading: false, editLoading: false,
-    editError: null, createLoading: false, createError: null, deleteLoading: false, deleteError: null, tcKind: null}
+    editError: null, createLoading: false, createError: null, deleteLoading: false, deleteError: null, tcKind: null, sentIds: []}
 
 export const getTable = createAsyncThunk(
     'database/getTable',
@@ -30,6 +30,19 @@ export const getTCkind = createAsyncThunk(
     async (_, {rejectWithValue}) => {
         try{
             const url = 'https://localhost:8443/api/telecommand/kind'
+            const res = await axios.get(url)
+            return res.data
+        } catch (error) {
+            return rejectWithValue(error.response.data)
+        }
+    }
+)
+
+export const getSent = createAsyncThunk(
+    'database/getSent',
+    async (_, {rejectWithValue}) => {
+        try{
+            const url = 'https://localhost:8443/api/telecommand/sent'
             const res = await axios.get(url)
             return res.data
         } catch (error) {
@@ -108,6 +121,9 @@ const databaseSlice = createSlice({
         builder.addCase(editTelecommand.rejected, (state, action) => {
             state.editLoading = false
             state.editError = action.payload.msg
+            if (action.payload.sentIds) {
+                state.sentIds = action.payload.sentIds
+            }
         })
         builder.addCase(getTCkind.pending, (state) => {
             state.tcKind = null
@@ -147,6 +163,12 @@ const databaseSlice = createSlice({
         builder.addCase(deleteTelecommand.rejected, (state, action) => {
             state.deleteLoading = false
             state.deleteError = action.payload.msg
+            if (action.payload.sentIds) {
+                state.sentIds = action.payload.sentIds
+            }
+        })
+        builder.addCase(getSent.fulfilled, (state, action) => {
+            state.sentIds = action.payload
         })
     }
 })

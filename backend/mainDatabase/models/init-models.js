@@ -109,6 +109,7 @@ const _TC_Restart_Device = require("./TC_Restart_Device");
 const _TC_Start_Manual_Control = require("./TC_Start_Manual_Control");
 const _TC_Stop_Manual_Control = require("./TC_Stop_Manual_Control");
 const _TC_Type = require("./TC_Type");
+const _TC_Type_Sent = require("./TC_Type_Sent");
 const _TMTC_Mode = require("./TMTC_Mode");
 const _TM_Type = require("./TM_Type");
 const _T_Boolean = require("./T_Boolean");
@@ -234,6 +235,7 @@ function initModels(sequelize) {
   const TC_Start_Manual_Control = _TC_Start_Manual_Control(sequelize, DataTypes);
   const TC_Stop_Manual_Control = _TC_Stop_Manual_Control(sequelize, DataTypes);
   const TC_Type = _TC_Type(sequelize, DataTypes);
+  const TC_Type_Sent = _TC_Type_Sent(sequelize, DataTypes);
   const TMTC_Mode = _TMTC_Mode(sequelize, DataTypes);
   const TM_Type = _TM_Type(sequelize, DataTypes);
   const T_Boolean = _T_Boolean(sequelize, DataTypes);
@@ -579,6 +581,7 @@ function initModels(sequelize) {
     TC_Start_Manual_Control,
     TC_Stop_Manual_Control,
     TC_Type,
+    TC_Type_Sent,
     TMTC_Mode,
     TM_Type,
     T_Boolean,

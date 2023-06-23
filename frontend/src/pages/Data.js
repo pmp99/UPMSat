@@ -11,7 +11,7 @@ import {
     DialogTitle, Snackbar,
     TextField
 } from "@mui/material";
-import {getTable, editTelecommand, deleteTelecommand, getTCkind} from "../redux/databaseSlice";
+import {getTable, editTelecommand, deleteTelecommand, getTCkind, getSent} from "../redux/databaseSlice";
 import {Navigate} from "react-router-dom";
 import Paper from '@mui/material/Paper';
 import {DateTimePicker} from '@mui/x-date-pickers/DateTimePicker';
@@ -28,6 +28,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import Collapse from '@mui/material/Collapse';
 import ListItemButton from '@mui/material/ListItemButton';
 import TreeItem, {treeItemClasses} from '@mui/lab/TreeItem';
@@ -50,6 +51,7 @@ function Data(props) {
     const deleteError = useSelector(state => state.database.deleteError)
     const deleteLoading = useSelector(state => state.database.deleteLoading)
     const tcKind = useSelector(state => state.database.tcKind)
+    const sentIds = useSelector(state => state.database.sentIds)
     const [start, setStart] = useState()
     const [end, setEnd] = useState()
     const [open, setOpen] = useState()
@@ -69,6 +71,9 @@ function Data(props) {
             dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))
             if (!tm && !tcKind) {
                 dispatch(getTCkind())
+            }
+            if (!tm) {
+                dispatch(getSent())
             }
         }
     }, [auth.user])
@@ -283,7 +288,7 @@ function Data(props) {
                             <Button onClick={() => setExpanded(oldExpanded => oldExpanded.length === 0 ? treeKeys.current.slice(0) : [])}>
                                 {expanded.length === 0 ? 'Expand all' : 'Collapse all'}
                             </Button>
-                            {!tm ?
+                            {!tm && !sentIds.includes(row['iid']) ?
                                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                     {editable !== null ? <Button onClick={() => setEditable(null)}>Cancel</Button> : null}
                                     {editable === null ?
@@ -300,7 +305,7 @@ function Data(props) {
                                             }}>
                                         {editable === null ? 'Edit' : editLoading ? 'Loading' : 'Save'}
                                     </Button>
-                                </div> : null}
+                                </div> : !tm ? <CloudDoneIcon fontSize="large" /> : null}
                         </div>
                         <TreeView
                             defaultCollapseIcon={<ExpandMore />}
@@ -368,13 +373,13 @@ function Data(props) {
                                     label="Start"
                                     value={start}
                                     onChange={(v) => setStart(v)}
-                                    format="DD/MM/YYYY hh:mm:ss"
+                                    views={['year', 'month', 'day', 'hours', 'minutes', 'seconds']}
                                 />
                                 <DateTimePicker
                                     label="End"
                                     value={end}
                                     onChange={(v) => setEnd(v)}
-                                    format="DD/MM/YYYY hh:mm:ss"
+                                    views={['year', 'month', 'day', 'hours', 'minutes', 'seconds']}
                                 />
                                 <Button variant={'outlined'} onClick={() => auth.user && dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))}>
                                     <RefreshRoundedIcon/>

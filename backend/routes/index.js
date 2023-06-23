@@ -186,6 +186,12 @@ router.get('/telecommand', authMiddleware, (req, res, next) => {
         .catch(error => res.status(400).send({msg: error.message}))
 })
 
+router.get('/telecommand/sent', authMiddleware, (req, res, next) => {
+    models.TC_Type_Sent.findAll()
+        .then(r => res.send(r.map(e => e.iid)))
+        .catch(error => res.status(400).send({msg: error.message}))
+})
+
 router.get('/telecommand/kind', authMiddleware, (req, res, next) => {
     res.send(telecommandKind)
 })
@@ -195,6 +201,11 @@ router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
 
     try{
         const tc = await db.transaction(async (t) => {
+            let sent = await models.TC_Type_Sent.findAll({transaction: t})
+            sent = sent.map(e => e.iid)
+            if (sent.includes(id)) {
+                return sent
+            }
             const currentTC = await models.TC_Type.findByPk(id, {include: {all: true, nested: true}, transaction: t})
             const edit = telecommandKind[currentTC?.kind]
 
@@ -235,8 +246,11 @@ router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
             }
             return await models.TC_Type.findByPk(id, {include: {all: true, nested: true}, transaction: t})
         })
-        res.send(tc)
-        await tc.destroy()
+        if (Array.isArray(tc)) {
+            res.status(400).send({msg: 'TC not edited. Already sent', sentIds: tc})
+        } else {
+            res.send(tc)
+        }
     } catch(error) {
         res.status(400).send({msg: error.message})
     }
@@ -292,9 +306,25 @@ router.post('/telecommand', authMiddleware, async (req, res, next) => {
 
 router.delete('/telecommand/:id', authMiddleware, async (req, res, next) => {
     const id = parseInt(req.params.id)
-    models.TC_Type.destroy({where: {iid: id}})
-        .then(_ => res.send({msg: 'Deleted TC', id: id}))
-        .catch(error => res.status(400).send({msg: error.message}))
+
+    try{
+        const tc = await db.transaction(async (t) => {
+            let sent = await models.TC_Type_Sent.findAll({transaction: t})
+            sent = sent.map(e => e.iid)
+            if (sent.includes(id)) {
+                return sent
+            }
+            await models.TC_Type.destroy({where: {iid: id}, transaction: t})
+            return true
+        })
+        if (tc === true) {
+            res.send({msg: 'Deleted TC', id: id})
+        } else {
+            res.status(400).send({msg: 'TC not deleted. Already sent', sentIds: tc})
+        }
+    } catch(error) {
+        res.status(400).send({msg: error.message})
+    }
 })
 
 router.get('/streaming', authMiddleware, async (req, res, next) => {
@@ -337,15 +367,6 @@ router.get('/streaming', authMiddleware, async (req, res, next) => {
     })
 
     res.on('close', () => {
-        console.log('CLOSE')
-        res.end()
-    })
-    res.on('finish', () => {
-        console.log('FINISH')
-        res.end()
-    })
-    res.on('error', (err) => {
-        console.log('ERROR', err)
         res.end()
     })
 })
