@@ -6,6 +6,7 @@ import {Button, ListItemIcon, Menu, MenuItem} from "@mui/material";
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import EditIcon from '@mui/icons-material/Edit';
+import SensorsIcon from '@mui/icons-material/Sensors';
 import {Link, useLocation, useNavigate} from "react-router-dom";
 
 function Navbar() {
@@ -38,7 +39,9 @@ function Navbar() {
                 <Link className="navbarLogo" to={'/'}>UPMSat</Link>
             </div>
             {location.pathname === '/' ? null :
-                <h1 className="tableTitle">{location.pathname.includes('hk') ? 'Housekeeping Telemetry' : location.pathname.includes('sc') ? 'Scientific Telemetry' : location.pathname.includes('telecommand') ? 'Telecommand' : ''}</h1>}
+                <h1 className="tableTitle">{location.pathname.includes('hk') ? 'Housekeeping Telemetry' : location.pathname.includes('sc') ? 'Scientific Telemetry' :
+                    location.pathname.includes('telecommand') ? 'Telecommand' : ''}</h1>}
+            {location.pathname.includes('streaming') ? <SensorsIcon color="error" fontSize="large" /> : null}
             <div className="navbarButtons">
                 {!user && auth.userLoaded && <Button onClick={() => navigate('login')}>Log in</Button>}
                 {!user && auth.userLoaded && <Button variant="contained" onClick={() => navigate('register')}>Register</Button>}

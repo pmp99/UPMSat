@@ -1,3 +1,4 @@
+const pg = require('pg');
 const express = require('express');
 const router = express.Router();
 const mysql = require('../databases/mysqlClient')
@@ -26,7 +27,7 @@ const telecommandKind = {
 const authMiddleware = (req, res, next) => {
     const theToken = req.cookies.authToken
     if (!theToken) {
-        return res.status(422).json({msg: "Please provide the token"})
+        return res.status(422).json({msg: "The authentication session has expired. Please login again"})
     } else {
         try {
             req.body.tokenData = jwt.verify(theToken, secretKey)
@@ -155,7 +156,7 @@ const dateIntervalMiddleware = (req, res, next) => {
     }
     req.dateWhere = undefined
     if (!isNaN(start) && !isNaN(end)) {
-        req.dateWhere = {data: {[Op.between]: [start, end]}}
+        req.dateWhere = {'$timestamp_secs.data$': {[Op.between]: [start, end]}}
     }
     next()
 }
@@ -167,118 +168,20 @@ router.get('/telemetry/:type', authMiddleware, dateIntervalMiddleware, (req, res
         return res.status(400).send({msg: "Incorrect telemetry type"})
     }
 
-    const scInclude = [
-        {model: models.UINT32_Type, as: 'sequence_number'},
-        {model: models.INT32_Type, as: 'timestamp_secs', where: req.dateWhere},
-        {model: models.Balloon_Mode, as: 'balloon_mode'},
-        {model: models.SC_TM_Type_payload, as: 'payload', include: [
-            {model: models.HTL_SC_TM_Type, as: 'htl', include: [
-                {model: models.INT32_Type, as: 'snapshot_time_secs'},
-                    {model: models.INT16_Type, as: 'exp1_horizontal_heated_plate'},
-                    {model: models.INT16_Type, as: 'exp2_vertical_heated_plate'},
-                    {model: models.INT16_Type, as: 'exp3_horizontal_heated_plate'},
-                    {model: models.INT16_Type, as: 'exp4_inner_vertical_plate_surface'},
-                    {model: models.INT16_Type, as: 'exp4_intermediate_heated_plate_surface'},
-                    {model: models.INT16_Type, as: 'exp4_exterior_plate_surface'},
-                    {model: models.INT16_Type, as: 'exp1_air_cavity_intermediate_height'},
-                    {model: models.INT16_Type, as: 'exp1_air_cavity_upper_height'},
-                    {model: models.INT16_Type, as: 'exp2_air_cavity_intermediate_height'},
-                    {model: models.INT16_Type, as: 'exp2_air_cavity_upper_height'},
-                    {model: models.INT16_Type, as: 'exp3_air_cavity_intermediate_height'},
-                    {model: models.INT16_Type, as: 'exp3_air_cavity_upper_height'},
-                    {model: models.INT16_Type, as: 'exp4_air_cavity_small_intermediate_1'},
-                    {model: models.INT16_Type, as: 'exp4_air_cavity_small_intermediate_2'},
-                    {model: models.INT16_Type, as: 'exp4_air_cavity_big_intermediate_1'},
-                    {model: models.INT16_Type, as: 'exp4_air_cavity_big_intermediate_2'},
-                    {model: models.HTL_SC_TM_Type_heaters, as: 'heaters'}
-            ]},
-            {model: models.EL_SC_TM_Type, as: 'el', include: [
-                {model: models.INT32_Type, as: 'snapshot_time_secs'},
-                {model: models.INT16_Type, as: 'upwards_pyranometer'},
-                {model: models.INT16_Type, as: 'upwards_pyrgeometer'},
-                {model: models.INT16_Type, as: 'downwards_pyranometer'},
-                {model: models.INT16_Type, as: 'downwards_pyrgeometer'},
-                {model: models.EL_SC_TM_Type_dif_barometers, as: 'dif_barometers'}]},
-            {model: models.NADS_SC_TM_Type, as: 'nads', include: [
-                {model: models.INT32_Type, as: 'snapshot_time_secs'},
-                {model: models.IMU_Sensors_Data, as: 'imu_sensors', include: [
-                    {model: models.Axis_Data, as: 'acceleration', include: [{model: models.FLOAT32_Type, as: 'x'}, {model: models.FLOAT32_Type, as: 'y'}, {model: models.FLOAT32_Type, as: 'z'}]},
-                        {model: models.Axis_Data, as: 'mag_field', include: [{model: models.FLOAT32_Type, as: 'x'}, {model: models.FLOAT32_Type, as: 'y'}, {model: models.FLOAT32_Type, as: 'z'}]},
-                        {model: models.Axis_Data, as: 'angular_velocity', include: [{model: models.FLOAT32_Type, as: 'x'}, {model: models.FLOAT32_Type, as: 'y'}, {model: models.FLOAT32_Type, as: 'z'}]}]
-                },
-                {model: models.GPS_Data, as: 'gps', include: [
-                    {model: models.INT32_Type, as: 'time_secs'},
-                    {model: models.INT32_Type, as: 'time_nsecs'},
-                    {model: models.FLOAT32_Type, as: 'latitude_deg'},
-                    {model: models.FLOAT32_Type, as: 'longitude_deg'},
-                    {model: models.FLOAT32_Type, as: 'altitude_m'},
-                    {model: models.FLOAT32_Type, as: 'sog_knots'},
-                    {model: models.FLOAT32_Type, as: 'cog_deg'}]
-                }]
-            },
-            {model: models.ATL_SC_TM_Type, as: 'atl', include: [
-                {model: models.INT32_Type, as: 'snapshot_time_secs'},
-                {model: models.ATL_SC_TM_Type_photodiodes, as: 'photodiodes'}]
-            }]
-        }
-    ]
-
-    const hkInclude = [
-        {model: models.UINT32_Type, as: 'sequence_number'},
-        {model: models.INT32_Type, as: 'timestamp_secs', where: req.dateWhere},
-        {model: models.Balloon_Mode, as: 'balloon_mode'},
-        {model: models.HK_TM_Type_payload, as: 'payload', include: [
-            {model: models.ATL_HK_TM_Type, as: 'atl_hk', include: [
-                {model: models.INT32_Type, as: 'snapshot_time_secs'},
-                {model: models.ATL_HK_TM_Type_temperatures, as: 'temperatures'}
-            ]},
-            {model: models.EL_HK_TM_Type, as: 'el_hk', include: [
-                {model: models.INT32_Type, as: 'snapshot_time_secs'},
-                {model: models.INT16_Type, as: 'upwards_pyranometer_temperature'},
-                {model: models.INT16_Type, as: 'upwards_pyrgeometer_temperature'},
-                {model: models.Switch_Status, as: 'upwards_heater_status'},
-                {model: models.INT16_Type, as: 'downwards_pyranometer_temperature'},
-                {model: models.INT16_Type, as: 'downwards_pyrgeometer_temperature'},
-                {model: models.Switch_Status, as: 'downwards_heater_status'},
-                {model: models.FLOAT32_Type, as: 'abs_pressure_mbar_1'},
-                {model: models.FLOAT32_Type, as: 'abs_pressure_mbar_2'}]},
-            {model: models.PCU_HK_TM_Type, as: 'pcu_hk', include: [
-                {model: models.INT32_Type, as: 'snapshot_time_secs'},
-                {model: models.INT8_Type, as: 'temperature'},
-                {model: models.FLOAT32_Type, as: 'v_bat'},
-                {model: models.FLOAT32_Type, as: 'a_bat'},
-                {model: models.PCU_PS_Lines_Status, as: 'switches', include: [
-                    {model: models.Switch_Status, as: 'al_line'},
-                    {model: models.Switch_Status, as: 'tmu_line'},
-                    {model: models.Switch_Status, as: 'sdpu_line'}]
-                }]
-            }]
-        }
-    ]
-
     if (type === 'sc') {
-        models.SC_TM_Type.findAll({include: scInclude, order: [["iid", "DESC"]]})
+        models.SC_TM_Type.findAll({include: {all: true, nested: true}, where: req.dateWhere, order: [["iid", "DESC"]]})
             .then(r => res.send(r))
             .catch(error => res.status(400).send({msg: error.message}))
     } else {
-        models.HK_TM_Type.findAll({include: hkInclude, order: [["iid", "DESC"]]})
+        models.HK_TM_Type.findAll({include: {all: true, nested: true}, where: req.dateWhere, order: [["iid", "DESC"]]})
             .then(r => res.send(r))
             .catch(error => res.status(400).send({msg: error.message}))
     }
 })
 
 
-const tcInclude = [
-    {model: models.TC_Change_Balloon_Mode, as: 'change_balloon_mode', include: [{model: models.Balloon_Mode, as: 'new_mode'}]},
-    {model: models.TC_Control_Experiment_Heater, as: 'control_experiment_heater', include: [{model: models.Heater_ID, as: 'heater'}, {model: models.Heater_Power_Type, as: 'heater_power'}]},
-    {model: models.TC_Start_Manual_Control, as: 'start_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]},
-    {model: models.TC_Stop_Manual_Control, as: 'stop_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]},
-    {model: models.TC_Change_TM_Mode, as: 'change_tm_mode', include: [{model: models.TMTC_Mode, as: 'new_mode'}]},
-    {model: models.TC_Restart_Device, as: 'restart_device', include: [{model: models.Restartable_Device_ID, as: 'device_id'}]}
-]
-
 router.get('/telecommand', authMiddleware, (req, res, next) => {
-    models.TC_Type.findAll({include: tcInclude, order: [["iid", "DESC"]]})
+    models.TC_Type.findAll({include: {all: true, nested: true}, order: [["iid", "DESC"]]})
         .then(r => res.send(r))
         .catch(error => res.status(400).send({msg: error.message}))
 })
@@ -292,7 +195,7 @@ router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
 
     try{
         const tc = await db.transaction(async (t) => {
-            const currentTC = await models.TC_Type.findByPk(id, {include: tcInclude, transaction: t})
+            const currentTC = await models.TC_Type.findByPk(id, {include: {all: true, nested: true}, transaction: t})
             const edit = telecommandKind[currentTC?.kind]
 
             if (currentTC?.change_balloon_mode?.new_mode?.data !== req.body.newTC?.change_balloon_mode?.new_mode?.data && edit === 'change_balloon_mode') {
@@ -330,7 +233,7 @@ router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
                     where: {iid: currentTC?.restart_device?.device_id?.iid}, transaction: t
                 })
             }
-            return await models.TC_Type.findByPk(id, {include: tcInclude, transaction: t})
+            return await models.TC_Type.findByPk(id, {include: {all: true, nested: true}, transaction: t})
         })
         res.send(tc)
         await tc.destroy()
@@ -352,33 +255,33 @@ router.post('/telecommand', authMiddleware, async (req, res, next) => {
                 const newData = await models.Balloon_Mode.create({data: data}, {transaction: t})
                 const tcType = await models.TC_Change_Balloon_Mode.create({fk_new_mode_iid: newData.iid}, {transaction: t})
                 const telecommand = await models.TC_Type.create({kind: kind, fk_change_balloon_mode_iid: tcType.iid}, {transaction: t})
-                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Change_Balloon_Mode, as: 'change_balloon_mode', include: [{model: models.Balloon_Mode, as: 'new_mode'}]}})
+                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {all: true, nested: true}})
             } else if (type === 'start_manual_control') {
                 const newData = await models.Heater_ID.create({data: data}, {transaction: t})
                 const tcType = await models.TC_Start_Manual_Control.create({fk_heater_iid: newData.iid}, {transaction: t})
                 const telecommand = await models.TC_Type.create({kind: kind, fk_start_manual_control_iid: tcType.iid}, {transaction: t})
-                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Start_Manual_Control, as: 'start_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]}})
+                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {all: true, nested: true}})
             } else if (type === 'stop_manual_control') {
                 const newData = await models.Heater_ID.create({data: data}, {transaction: t})
                 const tcType = await models.TC_Stop_Manual_Control.create({fk_heater_iid: newData.iid}, {transaction: t})
                 const telecommand = await models.TC_Type.create({kind: kind, fk_stop_manual_control_iid: tcType.iid}, {transaction: t})
-                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Stop_Manual_Control, as: 'stop_manual_control', include: [{model: models.Heater_ID, as: 'heater'}]}})
+                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {all: true, nested: true}})
             } else if (type === 'control_experiment_heater') {
                 const newData = await models.Heater_ID.create({data: data}, {transaction: t})
                 const power = await models.Heater_Power_Type.create({data: data2}, {transaction: t})
                 const tcType = await models.TC_Control_Experiment_Heater.create({fk_heater_iid: newData.iid, fk_heater_power_iid: power.iid}, {transaction: t})
                 const telecommand = await models.TC_Type.create({kind: kind, fk_control_experiment_heater_iid: tcType.iid}, {transaction: t})
-                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Control_Experiment_Heater, as: 'control_experiment_heater', include: [{model: models.Heater_ID, as: 'heater'}, {model: models.Heater_Power_Type, as: 'heater_power'}]}})
+                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {all: true, nested: true}})
             } else if (type === 'restart_device') {
                 const newData = await models.Restartable_Device_ID.create({data: data}, {transaction: t})
                 const tcType = await models.TC_Restart_Device.create({fk_device_id_iid: newData.iid}, {transaction: t})
                 const telecommand = await models.TC_Type.create({kind: kind, fk_restart_device_iid: tcType.iid}, {transaction: t})
-                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Restart_Device, as: 'restart_device', include: [{model: models.Restartable_Device_ID, as: 'device_id'}]}})
+                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {all: true, nested: true}})
             } else if (type === 'change_tm_mode') {
                 const newData = await models.TMTC_Mode.create({data: data}, {transaction: t})
                 const tcType = await models.TC_Change_TM_Mode.create({fk_new_mode_iid: newData.iid}, {transaction: t})
                 const telecommand = await models.TC_Type.create({kind: kind, fk_change_tm_mode_iid: tcType.iid}, {transaction: t})
-                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {model: models.TC_Change_TM_Mode, as: 'change_tm_mode', include: [{model: models.TMTC_Mode, as: 'new_mode'}]}})
+                return await models.TC_Type.findByPk(telecommand.iid, {transaction: t, include: {all: true, nested: true}})
             }
         })
         res.send(tc)
@@ -392,6 +295,59 @@ router.delete('/telecommand/:id', authMiddleware, async (req, res, next) => {
     models.TC_Type.destroy({where: {iid: id}})
         .then(_ => res.send({msg: 'Deleted TC', id: id}))
         .catch(error => res.status(400).send({msg: error.message}))
+})
+
+router.get('/streaming', authMiddleware, async (req, res, next) => {
+    res.set({
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'text/event-stream',
+        'Connection': 'keep-alive'
+    })
+    res.flushHeaders()
+    res.write('retry: 10000\n\n')
+
+    const client = new pg.Client({
+        user: 'upmsat',
+        host: '127.0.0.1',
+        database: 'herccules',
+        password: 'upmsat'
+    })
+    client.connect((err, client, done) => {
+        if (err) {
+            console.log("ERROR CONNECTING")
+        } else {
+            console.log("DATABASE CONNECTED")
+            client.on('notification', data => {
+                if (data.channel === 'new_sc_tm') {
+                    const payload = JSON.parse(data.payload)
+                    models.SC_TM_Type.findByPk(payload.iid, {include: {all: true, nested: true}})
+                        .then(r =>  res.write(`data: ${JSON.stringify({type: 'sc', data: r})}\n\n`))
+                        .catch(error => console.log(error))
+                } else if (data.channel === 'new_hk_tm') {
+                    const payload = JSON.parse(data.payload)
+                    models.HK_TM_Type.findByPk(payload.iid, {include: {all: true, nested: true}})
+                        .then(r => res.write(`data: ${JSON.stringify({type: 'hk', data: r})}\n\n`))
+                        .catch(error => console.log(error))
+                }
+                console.log('ROW ADDED', data)
+            })
+            client.query('LISTEN new_sc_tm')
+            client.query('LISTEN new_hk_tm')
+        }
+    })
+
+    res.on('close', () => {
+        console.log('CLOSE')
+        res.end()
+    })
+    res.on('finish', () => {
+        console.log('FINISH')
+        res.end()
+    })
+    res.on('error', (err) => {
+        console.log('ERROR', err)
+        res.end()
+    })
 })
 
 

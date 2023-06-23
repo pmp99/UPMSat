@@ -8,6 +8,11 @@
     text-align: center;
 }
 
+.emptyText {
+    margin-top: 5rem;
+    text-align: center;
+}
+
 .tableTitle {
     text-align: center;
     animation: slide-in-bottom 0.3s ease-in-out both;

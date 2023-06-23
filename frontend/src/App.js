@@ -5,6 +5,7 @@ import Main from "./pages/Main";
 import Navbar from "./pages/Navbar";
 import Register from "./pages/Register";
 import Data from "./pages/Data";
+import Streaming from "./pages/Streaming";
 
 function App() {
   return(
@@ -17,6 +18,7 @@ function App() {
               <Route path="telemetry/hk" element={<Data tm={'hk'}/>} />
               <Route path="telemetry/sc" element={<Data tm={'sc'}/>} />
               <Route path="telecommand" element={<Data/>} />
+              <Route path="streaming" element={<Streaming/>} />
               <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
       </BrowserRouter>

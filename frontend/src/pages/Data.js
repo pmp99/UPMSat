@@ -35,9 +35,9 @@ import TreeView from '@mui/lab/TreeView';
 import {styled} from '@mui/material/styles';
 import {get, isEqual} from 'lodash';
 import Fade from '@mui/material/Fade';
-import Modal from '@mui/base/Modal';
 import CreateTC from "./CreateTC";
 import Plot from "./Plot";
+import StyledModal from "./StyledModal"
 
 function Data(props) {
     const dispatch = useDispatch()
@@ -117,38 +117,6 @@ function Data(props) {
     const getData = (d) => {
         return typeof d !== 'object' ? d : (d['data'] !== undefined ? d['data'] : d['iid'])
     }
-
-    const StyledModal = styled(Modal)`
-      position: fixed;
-      z-index: 1300;
-      right: 0;
-      bottom: 0;
-      top: 0;
-      left: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
-
-    const Backdrop = React.forwardRef((props, ref) => {
-        const {open, ...other} = props
-        return (
-            <Fade in={open}>
-                <div ref={ref} {...other} />
-            </Fade>
-        )
-    })
-
-    const StyledBackdrop = styled(Backdrop)`
-      z-index: -1;
-      position: fixed;
-      right: 0;
-      bottom: 0;
-      top: 0;
-      left: 0;
-      background-color: rgba(0, 0, 0, 0.5);
-      -webkit-tap-highlight-color: transparent;
-    `;
 
     const StyledTreeItemRoot = styled(TreeItem)(({ theme }) => ({
         color: theme.palette.text.secondary,
@@ -251,12 +219,12 @@ function Data(props) {
     }
 
     const header = () => {
-        if (!table || !table.data || table.data.length === 0) {
+        if (!table || !table.data) {
             return null
         }
         return (
             <div style={{display: 'flex', alignItems: 'center', padding: '0.5rem 1rem 1rem 1rem'}}>
-                {Object.keys(table.data[0]).map(column => {
+                {table.data.length > 0 && Object.keys(table.data[0]).map(column => {
                     if (!column.includes('fk_') && isData(table.data[0][column])) {
                         return(
                             <div key={column} style={{flex: 1, justifyContent: 'flex-start'}}>
@@ -348,7 +316,8 @@ function Data(props) {
         )
     }
 
-    const loaded = table && table.data && table.data.length > 0 && table.name === (tm ? tm : 'tc')
+    const loaded = table && table.data && table.name === (tm ? tm : 'tc')
+    const empty = loaded && table.data.length === 0
 
     return (
         <div className="container">
@@ -365,25 +334,21 @@ function Data(props) {
                                 {errorMessage}
                             </Alert>
                         </Snackbar> : null}
-                    {loaded && tm ?
+                    {loaded && !empty && tm ?
                         <StyledModal
                             open={modalOpened}
                             onClose={() => setModalOpened(false)}
-                            closeAfterTransition
-                            slots={{backdrop: StyledBackdrop}}
                         >
-                            <Plot plotVars={plotVars} modalOpened={modalOpened} data={table.data} />
+                            <Plot plotVars={plotVars} modalOpened={modalOpened} data={[...table.data].reverse()} />
                         </StyledModal> : null}
                     {loaded && !tm && tcKind ?
                         <StyledModal
                             open={modalOpened}
                             onClose={() => setModalOpened(false)}
-                            closeAfterTransition
-                            slots={{backdrop: StyledBackdrop}}
                         >
                             <CreateTC modalOpened={modalOpened} tcKind={tcKind} />
                         </StyledModal> : null}
-                    {loaded && !tm ?
+                    {loaded && !empty && !tm ?
                         <Dialog open={tcToDelete !== null} onClose={() => setTcToDelete(null)}>
                             <DialogTitle>Delete telecommand</DialogTitle>
                             <DialogContent>
@@ -424,12 +389,14 @@ function Data(props) {
                     {loaded ?
                         <div style={{flex: 1, margin: "0 2rem 2rem 2rem", display: 'flex', flexDirection: 'column'}}>
                             {header()}
-                            <Virtuoso
-                                style={{flex: 1}}
-                                data={table.data}
-                                itemContent={rowContent}
-                            />
-                        </div> : <p className="errorText">{table?.data?.length === 0 ? 'No data available' : tableError}</p>}
+                            {empty ? <h4 className="emptyText">No data available</h4> :
+                                <Virtuoso
+                                    style={{flex: 1}}
+                                    data={table.data}
+                                    itemContent={rowContent}
+                                />
+                            }
+                        </div> : <p className="errorText">{tableError}</p>}
                 </div> : <CircularProgress/>}
         </div>
     );

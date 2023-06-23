@@ -1,7 +1,7 @@
 module.exports = {
     development: {
         dialect: 'mysql',
-        database: process.env.MYSQL_DB_NAME || 'herccules',
+        database: process.env.MYSQL_DB_NAME || 'dummy_gs_2',
         username: process.env.MYSQL_DB_USERNAME || 'upmsat2',
         password: process.env.MYSQL_DB_PASSWORD || 'upmsat2',
         host: process.env.MYSQL_DB_HOST || '127.0.0.1',
@@ -9,7 +9,7 @@ module.exports = {
     },
     test: {
         dialect: 'mysql',
-        database: process.env.MYSQL_DB_NAME || 'herccules',
+        database: process.env.MYSQL_DB_NAME || 'dummy_gs_2',
         username: process.env.MYSQL_DB_USERNAME || 'upmsat2',
         password: process.env.MYSQL_DB_PASSWORD || 'upmsat2',
         host: process.env.MYSQL_DB_HOST || '127.0.0.1',
