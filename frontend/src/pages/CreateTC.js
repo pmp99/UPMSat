@@ -13,7 +13,7 @@ function CreateTC(props) {
     const [data2, setData2] = useState()
     const [errorOpened, setErrorOpened] = useState(false)
     const loaded = useRef(false)
-    const {modalOpened, tcKind} = props
+    const {modalOpened, enums} = props
 
     useEffect(() => {
         if (loading) {
@@ -26,25 +26,6 @@ function CreateTC(props) {
             setErrorOpened(true)
         }
     }, [error])
-
-    const label = (kind) => {
-        switch(kind) {
-            case '0':
-                return 'new_mode'
-            case '1':
-                return 'heater'
-            case '2':
-                return 'heater'
-            case '3':
-                return 'heater'
-            case '4':
-                return 'device_id'
-            case '5':
-                return 'new_mode'
-            default:
-                return ''
-        }
-    }
 
     const handleCreate = (e) => {
         e.preventDefault()
@@ -80,27 +61,37 @@ function CreateTC(props) {
                             required
                             onChange={(e) => setKind(e.target.value)}
                         >
-                            {Object.keys(tcKind).map(e => <MenuItem key={e} value={e}>{tcKind[e]}</MenuItem>)}
+                            {enums['TC_Type']['kind'].map((e, i) => <MenuItem key={e} value={i.toString()}>{e}</MenuItem>)}
                         </Select>
                     </FormControl>
-                    {kind ?
-                        <TextField
-                            className="form-group"
-                            label={label(kind)}
-                            value={data}
-                            onChange={e => setData(e.target.value)}
-                            required
-                            variant="standard"
-                        /> : null}
-                    {kind === '3' ?
-                        <TextField
-                            className="form-group"
-                            label="heater_power"
-                            value={data2}
-                            onChange={e => setData2(e.target.value)}
-                            required
-                            variant="standard"
-                        /> : null}
+                    {kind ? Object.keys(enums['TC_Type'][enums['TC_Type']['kind'][kind]]).map((l, i) => {
+                        if (enums['TC_Type'][enums['TC_Type']['kind'][kind]][l]) {
+                            return(
+                                <FormControl key={l} fullWidth>
+                                    <InputLabel>{l}</InputLabel>
+                                    <Select
+                                        value={i === 0 ? (data || '') : (data2 || '')}
+                                        label={l}
+                                        required
+                                        onChange={e => i === 0 ? setData(e.target.value) : setData2(e.target.value)}
+                                    >
+                                        {enums['TC_Type'][enums['TC_Type']['kind'][kind]][l].map((e, i) => <MenuItem key={e} value={i.toString()}>{e}</MenuItem>)}
+                                    </Select>
+                                </FormControl>
+                            )
+                        } else {
+                            return(
+                                <TextField
+                                    key={l}
+                                    label={l}
+                                    value={i === 0 ? data : data2}
+                                    onChange={e => i === 0 ? setData(e.target.value) : setData2(e.target.value)}
+                                    required
+                                    variant="standard"
+                                />
+                            )
+                        }
+                    }) : null}
                     <Button type="submit" variant="contained" className="submitButton">
                         {loading ? <CircularProgress size="1.5rem" /> : 'Create'}
                     </Button>

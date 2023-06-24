@@ -10,19 +10,11 @@ const {validationResult} = require("express-validator");
 const db = require('../mainDatabase/db');
 const initModels = require('../mainDatabase/models/init-models')
 const models = initModels(db)
+const enums = require('../mainDatabase/enums.json')
 
 const secretKey = 'BQuhVBupZGnKroT1lIMoo3YsdhEb05YWVMcn5rrSY5vqz5dH5ZTBpiQtZiziFkE'
 const tokenExpiration = '24h'
 const cookieMaxAge = 24*60*60*1000
-
-const telecommandKind = {
-    '0': 'change_balloon_mode',
-    '1': 'start_manual_control',
-    '2': 'stop_manual_control',
-    '3': 'control_experiment_heater',
-    '4': 'restart_device',
-    '5': 'change_tm_mode'
-}
 
 const authMiddleware = (req, res, next) => {
     const theToken = req.cookies.authToken
@@ -192,8 +184,8 @@ router.get('/telecommand/sent', authMiddleware, (req, res, next) => {
         .catch(error => res.status(400).send({msg: error.message}))
 })
 
-router.get('/telecommand/kind', authMiddleware, (req, res, next) => {
-    res.send(telecommandKind)
+router.get('/enums', authMiddleware, (req, res, next) => {
+    res.send(enums)
 })
 
 router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
@@ -207,7 +199,7 @@ router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
                 return sent
             }
             const currentTC = await models.TC_Type.findByPk(id, {include: {all: true, nested: true}, transaction: t})
-            const edit = telecommandKind[currentTC?.kind]
+            const edit = enums['TC_Type']['kind'][currentTC?.kind]
 
             if (currentTC?.change_balloon_mode?.new_mode?.data !== req.body.newTC?.change_balloon_mode?.new_mode?.data && edit === 'change_balloon_mode') {
                 await models.Balloon_Mode.update({data: req.body.newTC?.change_balloon_mode?.new_mode?.data}, {
@@ -258,7 +250,7 @@ router.post('/telecommand/:id', authMiddleware, async (req, res, next) => {
 
 router.post('/telecommand', authMiddleware, async (req, res, next) => {
     const {kind, data, data2} = req.body
-    const type = telecommandKind[kind]
+    const type = enums['TC_Type']['kind'][kind]
     if (!type) {
         return res.status(400).send({msg: 'Invalid telecommand'})
     }

@@ -3,7 +3,7 @@ import axios from "axios";
 axios.defaults.withCredentials = true
 
 const initialState = {table: null, tableError: null, loading: false, editLoading: false,
-    editError: null, createLoading: false, createError: null, deleteLoading: false, deleteError: null, tcKind: null, sentIds: []}
+    editError: null, createLoading: false, createError: null, deleteLoading: false, deleteError: null, enums: null, sentIds: []}
 
 export const getTable = createAsyncThunk(
     'database/getTable',
@@ -25,11 +25,11 @@ export const getTable = createAsyncThunk(
     }
 )
 
-export const getTCkind = createAsyncThunk(
-    'database/getTCkind',
+export const getEnums = createAsyncThunk(
+    'database/getEnums',
     async (_, {rejectWithValue}) => {
         try{
-            const url = 'https://localhost:8443/api/telecommand/kind'
+            const url = 'https://localhost:8443/api/enums'
             const res = await axios.get(url)
             return res.data
         } catch (error) {
@@ -125,14 +125,14 @@ const databaseSlice = createSlice({
                 state.sentIds = action.payload.sentIds
             }
         })
-        builder.addCase(getTCkind.pending, (state) => {
-            state.tcKind = null
+        builder.addCase(getEnums.pending, (state) => {
+            state.enums = null
         })
-        builder.addCase(getTCkind.fulfilled, (state, action) => {
-            state.tcKind = action.payload
+        builder.addCase(getEnums.fulfilled, (state, action) => {
+            state.enums = action.payload
         })
-        builder.addCase(getTCkind.rejected, (state) => {
-            state.tcKind = null
+        builder.addCase(getEnums.rejected, (state) => {
+            state.enums = null
         })
         builder.addCase(createTelecommand.pending, (state) => {
             state.createLoading = true

@@ -11,7 +11,7 @@ import {
     DialogTitle, Snackbar,
     TextField
 } from "@mui/material";
-import {getTable, editTelecommand, deleteTelecommand, getTCkind, getSent} from "../redux/databaseSlice";
+import {getTable, editTelecommand, deleteTelecommand, getEnums, getSent} from "../redux/databaseSlice";
 import {Navigate} from "react-router-dom";
 import Paper from '@mui/material/Paper';
 import {DateTimePicker} from '@mui/x-date-pickers/DateTimePicker';
@@ -50,7 +50,7 @@ function Data(props) {
     const editLoading = useSelector(state => state.database.editLoading)
     const deleteError = useSelector(state => state.database.deleteError)
     const deleteLoading = useSelector(state => state.database.deleteLoading)
-    const tcKind = useSelector(state => state.database.tcKind)
+    const enums = useSelector(state => state.database.enums)
     const sentIds = useSelector(state => state.database.sentIds)
     const [start, setStart] = useState()
     const [end, setEnd] = useState()
@@ -69,8 +69,8 @@ function Data(props) {
     useEffect(() => {
         if (auth.user) {
             dispatch(getTable({table: tm ? tm : 'tc', start: start ? Math.round(Date.parse(start)/1000) : start, end: end ? Math.round(Date.parse(end)/1000) : end}))
-            if (!tm && !tcKind) {
-                dispatch(getTCkind())
+            if (!enums) {
+                dispatch(getEnums())
             }
             if (!tm) {
                 dispatch(getSent())
@@ -201,7 +201,7 @@ function Data(props) {
     }
 
     const renderTree = (data, editing, parents) => {
-        return Object.keys(data).filter(e => !e.includes('fk_')).map((k, _, keys) => {
+        return Object.keys(data).filter(e => !e.includes('fk_')).map(k => {
             if (data[k] === null) {
                 return null
             }
@@ -210,8 +210,15 @@ function Data(props) {
                 treeKeys.current.push(id)
             }
             const edit = editing && typeof data[k] !== 'object' && k === 'data'
+            let labelInfo = typeof data[k] !== 'object' ? data[k] : null
+            if (labelInfo !== null && k === 'data') {
+                const type = tm === 'hk' ? 'HK_TM_Type' : tm === 'sc' ? 'SC_TM_Type' : 'TC_Type'
+                if (get(enums[type], parents)) {
+                    labelInfo = get(enums[type], parents.concat(data[k]))
+                }
+            }
             return(
-                <StyledTreeItem key={id} nodeId={id} labelText={k} labelInfo={typeof data[k] !== 'object' ? data[k] : null} editing={edit} parents={parents.concat(k)}
+                <StyledTreeItem key={id} nodeId={id} labelText={k} labelInfo={labelInfo} editing={edit} parents={parents.concat(k)}
                                 onEdit={(value) => setEditable(prevState => {
                                     let p = parents.concat(k)
                                     let o = p.reduceRight((obj, elem) => ({[elem]: obj}), value)
@@ -346,12 +353,12 @@ function Data(props) {
                         >
                             <Plot plotVars={plotVars} modalOpened={modalOpened} data={[...table.data].reverse()} />
                         </StyledModal> : null}
-                    {loaded && !tm && tcKind ?
+                    {loaded && !tm && enums ?
                         <StyledModal
                             open={modalOpened}
                             onClose={() => setModalOpened(false)}
                         >
-                            <CreateTC modalOpened={modalOpened} tcKind={tcKind} />
+                            <CreateTC modalOpened={modalOpened} enums={enums} />
                         </StyledModal> : null}
                     {loaded && !empty && !tm ?
                         <Dialog open={tcToDelete !== null} onClose={() => setTcToDelete(null)}>

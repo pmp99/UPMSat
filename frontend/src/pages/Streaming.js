@@ -2,8 +2,8 @@ import React, {useEffect, useRef, useState} from 'react';
 import {useDispatch, useSelector} from "react-redux";
 import {Navigate} from "react-router-dom";
 import {Button, CircularProgress} from "@mui/material";
-import {merge} from 'lodash';
-import {getTCkind} from "../redux/databaseSlice";
+import {get, merge} from 'lodash';
+import {getEnums} from "../redux/databaseSlice";
 import StyledModal from "./StyledModal";
 import CreateTC from "./CreateTC";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
@@ -11,7 +11,7 @@ import AddCircleIcon from "@mui/icons-material/AddCircle";
 function Streaming() {
     const dispatch = useDispatch()
     const auth = useSelector(state => state.auth)
-    const tcKind = useSelector(state => state.database.tcKind)
+    const enums = useSelector(state => state.database.enums)
     const hk = useRef({})
     const sc = useRef({})
     const [update, setUpdate] = useState(false)
@@ -33,8 +33,8 @@ function Streaming() {
     }, [])
 
     useEffect(() => {
-        if (auth.user && !tcKind) {
-            dispatch(getTCkind())
+        if (auth.user && !enums) {
+            dispatch(getEnums())
         }
     }, [auth.user])
 
@@ -49,16 +49,31 @@ function Streaming() {
         )
     }
 
+    const preprocess = (obj, type, parents = []) => {
+        let res = {}
+        Object.keys(obj).forEach(k => {
+            if (!k.includes('fk_')) {
+                if (typeof obj[k] === 'object') {
+                    res[k] = preprocess(obj[k], type, parents.concat(k))
+                } else {
+                    let data = obj[k]
+                    res[k] = k === 'data' && data !== null && get(enums[type], parents) ? get(enums[type], parents.concat(obj[k])) : data
+                }
+            }
+        })
+        return res
+    }
+
     return(
         <div className="container">
-            {tcKind ?
+            {enums ?
                 <StyledModal
                     open={modalOpened}
                     onClose={() => setModalOpened(false)}
                 >
-                    <CreateTC modalOpened={modalOpened} tcKind={tcKind} />
+                    <CreateTC modalOpened={modalOpened} enums={enums} />
                 </StyledModal> : null}
-            {tcKind ?
+            {enums ?
                 <Button style={{position: 'absolute', right: '2rem', top: '6rem'}} variant="contained" onClick={() => setModalOpened(true)}>
                     <AddCircleIcon/>
                 </Button> : null}
@@ -67,14 +82,14 @@ function Streaming() {
                     <h3>SCIENTIFIC</h3>
                     <div style={{flex: 1, overflowY: 'scroll'}}>
                         {Object.keys(sc.current).length === 0 ? <h5>No data</h5> :
-                            <pre style={{fontSize: '0.7rem', lineHeight: '0.75rem'}}>{JSON.stringify(sc.current, (key, value) => key.includes("fk_") ? undefined : value, 8)}</pre>}
+                            <pre style={{fontSize: '0.7rem', lineHeight: '0.75rem'}}>{JSON.stringify(preprocess(sc.current, 'SC_TM_Type'), null, 8)}</pre>}
                     </div>
                 </div>
                 <div style={{flex: 1, margin: '1rem 2rem', flexDirection: 'column', display: 'flex'}}>
                     <h3>HOUSEKEEPING</h3>
                     <div style={{flex: 1, overflowY: 'scroll'}}>
                         {Object.keys(hk.current).length === 0 ? <h5>No data</h5> :
-                            <pre style={{fontSize: '0.7rem', lineHeight: '0.75rem'}}>{JSON.stringify(hk.current, (key, value) => key.includes("fk_") ? undefined : value, 8)}</pre>}
+                            <pre style={{fontSize: '0.7rem', lineHeight: '0.75rem'}}>{JSON.stringify(preprocess(hk.current, 'HK_TM_Type'), null, 8)}</pre>}
                     </div>
                 </div>
             </div>
