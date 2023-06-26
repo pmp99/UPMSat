@@ -1,16 +1,16 @@
 const pg = require('pg');
 const express = require('express');
 const router = express.Router();
-const mysql = require('../databases/mysqlClient')
+const userDatabase = require('../databases/userDatabaseConnection')
 const {signupValidation, loginValidation} = require('./validation');
 const {Op} = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const {validationResult} = require("express-validator");
-const db = require('../mainDatabase/db');
-const initModels = require('../mainDatabase/models/init-models')
+const db = require('../databases/mainDatabase/db');
+const initModels = require('../databases/mainDatabase/models/init-models')
 const models = initModels(db)
-const enums = require('../mainDatabase/enums.json')
+const enums = require('../databases/mainDatabase/enums.json')
 
 const secretKey = 'BQuhVBupZGnKroT1lIMoo3YsdhEb05YWVMcn5rrSY5vqz5dH5ZTBpiQtZiziFkE'
 const tokenExpiration = '24h'
@@ -36,13 +36,19 @@ router.post('/auth/register', signupValidation, (req, res, next) => {
     if (!validationErrors.isEmpty()) {
         return res.status(400).send({msg: validationErrors.errors.map(e => e.msg)})
     }
-    mysql.query(`SELECT * FROM user WHERE LOWER(username) = LOWER(?)`, req.body.username, (err, result) => {
-        if (result.length) {
+    userDatabase.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [req.body.username], (err, result) => {
+        if (err) {
+            return res.status(400).send({msg: err.message})
+        }
+        if (result.rows.length) {
             return res.status(409).send({msg: 'This user is already in use'})
         } else {
             // username is available
-            mysql.query(`SELECT * FROM user WHERE LOWER(email) = LOWER(?)`, req.body.email, (err, result) => {
-                if (result.length) {
+            userDatabase.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [req.body.email], (err, result) => {
+                if (err) {
+                    return res.status(400).send({msg: err.message})
+                }
+                if (result.rows.length) {
                     return res.status(409).send({msg: 'This email is already in use'})
                 } else {
                     bcrypt.hash(req.body.password, 10, (err, hash) => {
@@ -50,16 +56,16 @@ router.post('/auth/register', signupValidation, (req, res, next) => {
                             return res.status(500).send({msg: err})
                         } else {
                             // has hashed pw => add to database
-                            mysql.query(`INSERT INTO user (username, password, email, createdAt, lastLogin) VALUES (? , ? , ? , now(), now())`,
+                            userDatabase.query('INSERT INTO users (username, password, email, "createdAt", "lastLogin") VALUES ($1 , $2 , $3 , NOW(), NOW())',
                                 [req.body.username, hash, req.body.email], (err, result) => {
                                     if (err) {
-                                        return res.status(400).send({msg: err.sqlMessage})
+                                        return res.status(400).send({msg: err.message})
                                     }
-                                    mysql.query(`SELECT BIN_TO_UUID(id, true) AS id, username, email, admin FROM user WHERE LOWER(username) = LOWER(?)`, req.body.username, (err, result) => {
+                                    userDatabase.query('SELECT id, username, email, admin FROM users WHERE LOWER(username) = LOWER($1)', [req.body.username], (err, result) => {
                                         if (err) {
-                                            return res.status(400).send({msg: err.sqlMessage})
+                                            return res.status(400).send({msg: err.message})
                                         }
-                                        const user = result[0]
+                                        const user = result.rows[0]
                                         const token = jwt.sign({user: user}, secretKey, {expiresIn: tokenExpiration})
                                         return res.status(200).cookie("authToken", token, {
                                             httpOnly: true,
@@ -83,15 +89,15 @@ router.post('/auth/login', loginValidation, (req, res, next) => {
     if (!validationErrors.isEmpty()) {
         return res.status(400).send({msg: validationErrors.errors.map(e => e.msg)})
     }
-    mysql.query(`SELECT BIN_TO_UUID(id, true) AS id, username, email, admin, password FROM user WHERE username = ?`, req.body.username,(err, result) => {
+    userDatabase.query('SELECT id, username, email, admin, password FROM users WHERE username = $1', [req.body.username], (err, result) => {
         // user does not exists
         if (err) {
-            return res.status(400).send({msg: err.sqlMessage})
+            return res.status(400).send({msg: err.message})
         }
-        if (!result.length) {
+        if (!result.rows.length) {
             return res.status(401).send({msg: 'Username or password is incorrect'})
         }
-        const user = result[0]
+        const user = result.rows[0]
         const compactUser = {id: user.id, username: user.username, email: user.email, admin: user.admin}
         // check password
         bcrypt.compare(req.body.password, user.password, (bErr, bResult) => {
@@ -101,7 +107,7 @@ router.post('/auth/login', loginValidation, (req, res, next) => {
             }
             if (bResult) {
                 const token = jwt.sign({user: compactUser}, secretKey,{expiresIn: tokenExpiration})
-                mysql.query(`UPDATE user SET lastLogin = now() WHERE BIN_TO_UUID(id, true) = ?`, user.id)
+                userDatabase.query('UPDATE users SET "lastLogin" = NOW() WHERE id = $1', [user.id])
                 return res.status(200).cookie("authToken", token, {
                     httpOnly: true,
                     secure: true,
@@ -125,11 +131,11 @@ router.get('/auth/logout', (req, res, next) => {
 
 router.get('/auth/get-user', authMiddleware, (req, res, next) => {
     const tokenData = req.body.tokenData
-    mysql.query('SELECT BIN_TO_UUID(id, true) AS id, username, email, admin FROM user where BIN_TO_UUID(id, true)=?', tokenData.user.id, (error, results, fields) => {
-        if (error || results.length === 0) {
-            return res.status(400).send({msg: error?.sqlMessage || 'User not found'})
+    userDatabase.query('SELECT id, username, email, admin FROM users where id=$1', [tokenData.user.id], (error, results) => {
+        if (error || results.rows.length === 0) {
+            return res.status(400).send({msg: error?.msg || 'User not found'})
         }
-        const user = results[0]
+        const user = results.rows[0]
         return res.send({user: user})
     })
 })
