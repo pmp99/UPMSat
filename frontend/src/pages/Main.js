@@ -3,7 +3,6 @@ import './Main.css';
 import {useSelector} from "react-redux";
 import {Button, CircularProgress} from "@mui/material";
 import {useNavigate} from "react-router-dom";
-import SensorsIcon from '@mui/icons-material/Sensors';
 
 function Main() {
     const navigate = useNavigate()
@@ -16,11 +15,11 @@ function Main() {
             {!auth.user ? null : !auth.userLoaded ? <CircularProgress/> :
                 <div>
                     <div>
-                        <Button style={{margin: '1rem'}} onClick={() => navigate('telemetry/hk')}>HK Telemetry</Button>
-                        <Button style={{margin: '1rem'}} onClick={() => navigate('telemetry/sc')}>SC Telemetry</Button>
-                        <Button style={{margin: '1rem'}} onClick={() => navigate('telecommand')}>Telecommand</Button>
+                        <Button size="large" style={{margin: '1rem'}} onClick={() => navigate('telemetry/hk')}>HK Telemetry</Button>
+                        <Button size="large" style={{margin: '1rem'}} onClick={() => navigate('telemetry/sc')}>SC Telemetry</Button>
+                        <Button size="large" style={{margin: '1rem'}} onClick={() => navigate('telecommand')}>Telecommand</Button>
                     </div>
-                    <Button color="error" startIcon={<SensorsIcon/>} onClick={() => navigate('streaming')}>Streaming</Button>
+                    <Button size="large" color="error" onClick={() => navigate('streaming')}>Streaming</Button>
                 </div>
             }
         </div>

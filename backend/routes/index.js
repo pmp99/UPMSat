@@ -344,7 +344,6 @@ router.get('/streaming', authMiddleware, async (req, res, next) => {
         if (err) {
             console.log("ERROR CONNECTING")
         } else {
-            console.log("DATABASE CONNECTED")
             client.on('notification', data => {
                 if (data.channel === 'new_sc_tm') {
                     const payload = JSON.parse(data.payload)
@@ -357,7 +356,6 @@ router.get('/streaming', authMiddleware, async (req, res, next) => {
                         .then(r => res.write(`data: ${JSON.stringify({type: 'hk', data: r})}\n\n`))
                         .catch(error => console.log(error))
                 }
-                console.log('ROW ADDED', data)
             })
             client.query('LISTEN new_sc_tm')
             client.query('LISTEN new_hk_tm')

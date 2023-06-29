@@ -48,6 +48,7 @@ function Navbar() {
                 {user ?
                     <div>
                         <Button
+                            size="large"
                             className="profileButton"
                             onClick={handleClick}
                             endIcon={<AccountCircleIcon />}
