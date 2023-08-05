@@ -1,6 +1,7 @@
 {
   "TC_Type": {
     "kind": [
+      "TC_none",
       "change_balloon_mode",
       "start_manual_control",
       "stop_manual_control",

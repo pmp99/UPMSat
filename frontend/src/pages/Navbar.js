@@ -35,8 +35,10 @@ function Navbar() {
 
     return (
         <nav className="navbar">
-            <div style={{flex: 1}}>
-                <Link className="navbarLogo" to={'/'}>UPMSat</Link>
+            <div className="navbarLogoDiv">
+                <Link className="navbarLogo" to={'/'}>
+                    <img src="/HERCCULES_Logo_Hori.png" alt="Herccules" style={{height: '100%'}}/>
+                </Link>
             </div>
             {location.pathname === '/' ? null :
                 <h1 className="tableTitle">{location.pathname.includes('hk') ? 'Housekeeping Telemetry' : location.pathname.includes('sc') ? 'Scientific Telemetry' :

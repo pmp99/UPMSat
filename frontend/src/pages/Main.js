@@ -10,7 +10,7 @@ function Main() {
 
     return (
         <div className="App">
-            <h1>Welcome to UPMSat</h1>
+            <h1>Welcome to Herccules</h1>
             {auth.user || auth.loading || !auth.userLoaded ? null : <h4>Log in to see more options</h4>}
             {!auth.user ? null : !auth.userLoaded ? <CircularProgress/> :
                 <div>
